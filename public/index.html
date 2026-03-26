@@ -584,7 +584,7 @@ function renderCountdown(){
   if(cb) cb.innerHTML=`
     <div class="cb-days">${d}</div>
     <div class="cb-info">
-      <div class="cb-title">🏆 Hyrox Buenos Aires — 13 de junio 2025</div>
+      <div class="cb-title">🏆 Hyrox Buenos Aires — 13 de junio 2026</div>
       <div class="cb-sub">Cada sesión te acerca al resultado que querés.</div>
       <div style="margin-top:5px"><span class="badge" style="background:rgba(0,0,0,.3);color:${ph.color};border:1px solid ${ph.color}50">${ph.name}</span> <span style="color:var(--muted);font-size:11px">${ph.desc}</span></div>
     </div>
@@ -727,7 +727,7 @@ async function logWorkout(){
 function buildEvalPrompt(w,d,ph){
   return `Coach Hyrox élite. Evaluá esta sesión de atleta AVANZADO (2+ años, competencias, 6d/semana).
 
-COMPETENCIA: Buenos Aires 13/6/2025 — ${d} días | FASE: ${ph.name} — ${ph.desc}
+COMPETENCIA: Buenos Aires 13/6/2026 — ${d} días | FASE: ${ph.name} — ${ph.desc}
 PRIORIDADES: SkiErg/Remo/Bike, Sled Push/Pull, Burpees/Wall Balls, Sandbag/Farmers
 ${buildPRSummary()}
 
@@ -891,7 +891,7 @@ async function deleteW(id){
 async function getSuggestions(){
   setSugState('loading');
   const d=daysToComp();const ph=getPhase(d);
-  const prompt=`Coach Hyrox élite. Plan semanal 6 días para atleta AVANZADO → Buenos Aires 13/6/2025.
+  const prompt=`Coach Hyrox élite. Plan semanal 6 días para atleta AVANZADO → Buenos Aires 13/6/2026.
 FALTAN: ${d} días | FASE: ${ph.name} — ${ph.desc}
 PRIORIDADES: SkiErg/Remo/Bike, Sled, Burpees/Wall Balls, Sandbag/Farmers
 ${buildPRSummary()}
@@ -914,7 +914,7 @@ JSON sin markdown: {"day":"Hoy","name":"...","type":"...","duration":"...","desc
 async function getPhaseAdvice(){
   setSugState('loading');
   const d=daysToComp();const ph=getPhase(d);
-  const prompt=`Coach Hyrox. Consejo estratégico para atleta avanzado 6d/semana. Buenos Aires 13/6/2025 — ${d} días. Fase: ${ph.name}.
+  const prompt=`Coach Hyrox. Consejo estratégico para atleta avanzado 6d/semana. Buenos Aires 13/6/2026 — ${d} días. Fase: ${ph.name}.
 Prioridades: SkiErg/Remo/Bike, Sled, Burpees/Wall Balls, Sandbag/Farmers.
 Historial: ${buildHistorySummary()||'Sin historial.'}
 1. Qué priorizar 2. Errores típicos de esta fase 3. Distribución 6 días 4. Indicadores de progreso.
