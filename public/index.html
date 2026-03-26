@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Hyrox AI Coach — Buenos Aires 2026</title>
+<title>Hyrox AI Coach</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 :root{
@@ -139,6 +139,22 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;heigh
 .suggest-card .sb{color:var(--muted);font-size:13px;line-height:1.65;}
 .saving-indicator{position:fixed;top:16px;right:16px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 14px;font-size:12px;color:var(--muted);z-index:50;display:flex;align-items:center;gap:6px;}
 
+/* ── RACE CARDS ── */
+.race-card{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:9px;display:flex;align-items:center;gap:14px;transition:border .2s;}
+.race-card:hover{border-color:rgba(240,180,41,.3);}
+.race-card.is-active{border-color:var(--accent);background:rgba(240,180,41,.06);}
+.race-card.is-past{opacity:.55;}
+.race-flag{font-size:26px;width:36px;text-align:center;flex-shrink:0;}
+.race-info{flex:1;min-width:0;}
+.race-city{font-weight:800;font-size:15px;}
+.race-meta{font-size:12px;color:var(--muted);margin-top:2px;}
+.race-days{font-size:13px;font-weight:700;text-align:right;flex-shrink:0;}
+.race-actions{display:flex;gap:6px;align-items:center;flex-shrink:0;}
+.race-filter.active-filter{background:var(--accent);color:#0a0a0f;border-color:var(--accent);}
+.my-race-card{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:9px;display:flex;align-items:center;gap:14px;transition:all .2s;}
+.my-race-card.is-active-race{border-color:var(--accent);background:rgba(240,180,41,.07);}
+.active-star{color:var(--accent);font-size:16px;}
+
 @media(max-width:900px){
   .sidebar{width:54px;}.nav-item span,.logo h1,.logo .sub,.comp-countdown,.sidebar-footer .user-info{display:none;}
   .main{margin-left:54px;padding:14px;max-width:calc(100vw - 54px);}
@@ -162,7 +178,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;heigh
   <div class="auth-card">
     <div class="auth-logo">
       <h1>⚡ HYROX</h1>
-      <p>AI Coach — Buenos Aires 2026</p>
+      <p>AI Coach</p>
     </div>
     <div class="auth-tabs">
       <div class="auth-tab active" onclick="switchAuthTab('login')">Iniciar sesión</div>
@@ -195,6 +211,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;heigh
     <div class="nav-item" onclick="showPage('history')"><span class="nav-icon">📊</span><span>Historial</span></div>
     <div class="nav-item" onclick="showPage('suggestions')"><span class="nav-icon">🤖</span><span>Plan IA</span></div>
     <div class="nav-item" onclick="showPage('stations')"><span class="nav-icon">🎯</span><span>Estaciones</span></div>
+    <div class="nav-item" onclick="showPage('races')"><span class="nav-icon">🏆</span><span>Mis Carreras</span></div>
     <div class="nav-item" onclick="showPage('profile')"><span class="nav-icon">👤</span><span>Mi Perfil</span></div>
   </nav>
   <div class="sidebar-footer">
@@ -304,7 +321,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;heigh
     <div class="card">
       <div class="card-title">Evaluación del Coach IA</div>
       <div id="eval-placeholder" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:260px;color:var(--muted);text-align:center;gap:10px">
-        <div style="font-size:42px">🤖</div><p style="font-size:13px">Registrá tu sesión para recibir feedback orientado a Buenos Aires.</p>
+        <div style="font-size:42px">🤖</div><p style="font-size:13px">Registrá tu sesión para recibir feedback orientado a tu próxima carrera.</p>
       </div>
       <div id="eval-result" class="hidden"><div class="ai-box"><div class="ai-header"><span>🤖</span><span>Coach IA</span></div><div class="ai-content" id="eval-text"></div></div></div>
       <div id="eval-loading" class="hidden" style="flex-direction:column;align-items:center;justify-content:center;min-height:180px;gap:12px">
@@ -332,7 +349,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;heigh
 
 <!-- SUGGESTIONS -->
 <div id="page-suggestions" class="hidden">
-  <div class="page-header"><h2>Plan del Coach IA 🤖</h2><p>Periodización orientada al 13 de junio en Buenos Aires</p></div>
+  <div class="page-header"><h2>Plan del Coach IA 🤖</h2><p>Periodización orientada a tu próxima competencia</p></div>
   <div style="display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap">
     <button class="btn btn-primary" onclick="getSuggestions()">📅 Plan semanal</button>
     <button class="btn btn-secondary" onclick="getNextWorkout()">🎯 Próxima sesión</button>
@@ -379,12 +396,12 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;heigh
           <option value="m3">Masters 3 (50+)</option><option value="doubles">Doubles</option>
         </select>
       </div>
-      <div class="form-group"><label>Objetivo tiempo total — Buenos Aires</label><input type="text" id="p-goal-time" placeholder="Ej: 1:10:00"/></div>
-      <div class="form-group"><label>Motivación</label><textarea id="p-notes" placeholder="¿Qué querés lograr en Buenos Aires?"></textarea></div>
+      <div class="form-group"><label>Objetivo de tiempo total</label><input type="text" id="p-goal-time" placeholder="Ej: 1:10:00"/></div>
+      <div class="form-group"><label>Motivación</label><textarea id="p-notes" placeholder="¿Qué querés lograr?"></textarea></div>
       <button class="btn btn-primary" id="save-profile-btn" onclick="saveProfile()" style="width:100%">💾 Guardar perfil</button>
     </div>
     <div class="card">
-      <div class="card-title">Objetivos por estación — Buenos Aires</div>
+      <div class="card-title">Objetivos por estación</div>
       <div id="station-goals"></div>
       <button class="btn btn-secondary btn-sm" id="save-goals-btn" onclick="saveProfile()" style="margin-top:10px;width:100%">💾 Guardar objetivos</button>
     </div>
@@ -394,6 +411,34 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;heigh
     <p style="font-size:12px;color:var(--muted);margin-bottom:13px">Tus mejores marcas — la IA las usa para calibrar el feedback.</p>
     <div class="grid-3" id="pr-grid"></div>
     <button class="btn btn-primary" id="save-prs-btn" onclick="savePRs()" style="margin-top:14px">💾 Guardar PRs</button>
+  </div>
+</div>
+
+<!-- RACES PAGE -->
+<div id="page-races" class="hidden">
+  <div class="page-header"><h2>Mis Carreras 🏆</h2><p>Seleccioná las carreras a las que vas a competir y elegí cuál es tu objetivo principal</p></div>
+
+  <!-- MY AGENDA -->
+  <div class="card" style="margin-bottom:20px">
+    <div class="card-title">Mi agenda de competencias</div>
+    <div id="my-races-list" style="margin-top:8px">
+      <p style="color:var(--muted);font-size:13px">No tenés carreras agendadas. Agregá desde el catálogo de abajo.</p>
+    </div>
+  </div>
+
+  <!-- CATALOG -->
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:10px">
+      <div class="card-title" style="margin:0">Calendario oficial Hyrox</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-secondary btn-sm race-filter active" onclick="filterRaces('all',this)">Todas</button>
+        <button class="btn btn-secondary btn-sm race-filter" onclick="filterRaces('SAM',this)">🌎 Sudamérica</button>
+        <button class="btn btn-secondary btn-sm race-filter" onclick="filterRaces('EUR',this)">🌍 Europa</button>
+        <button class="btn btn-secondary btn-sm race-filter" onclick="filterRaces('NA',this)">🌎 Norteamérica</button>
+        <button class="btn btn-secondary btn-sm race-filter" onclick="filterRaces('APAC',this)">🌏 Asia/Oceanía</button>
+      </div>
+    </div>
+    <div id="races-catalog"></div>
   </div>
 </div>
 
@@ -422,10 +467,48 @@ const { createClient } = supabase;
 const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // ================================================================
+// HYROX RACE CATALOG — Updated from official calendar
+// ================================================================
+const HYROX_RACES = [
+  // SUDAMÉRICA
+  {id:'buenosaires-26', city:'Buenos Aires',       country:'Argentina',    flag:'🇦🇷', date:'2026-06-13', venue:'La Rural',    region:'SAM'},
+  {id:'riodejaneiro-26', city:'Rio de Janeiro',       country:'Brasil',    flag:'🇧🇷', date:'2026-11-21', venue:'Centro de Eventos',    region:'SAM'},
+  // EUROPA
+  {id:'barcelona-26', city:'Barcelona',       country:'España',    flag:'🇪🇸', date:'2026-05-01', venue:'Fira de Barcelona',    region:'EUR'},
+  {id:'rotterdam-26', city:'Rotterdam',       country:'Holanda',   flag:'🇳🇱', date:'2026-04-15', venue:'Ahoy Rotterdam',       region:'EUR'},
+  {id:'warsaw-26',    city:'Varsovia',        country:'Polonia',   flag:'🇵🇱', date:'2026-04-16', venue:'PGE Narodowy',         region:'EUR'},
+  // NORTEAMÉRICA
+  {id:'las-vegas-26', city:'Las Vegas',       country:'EEUU',      flag:'🇺🇸', date:'2026-02-13', venue:'Mandalay Bay',         region:'NA'},
+  {id:'ny-26',        city:'Nueva York',      country:'EEUU',      flag:'🇺🇸', date:'2026-05-28', venue:'New York City',        region:'NA'},
+  // ASIA/OCEANÍA
+  {id:'sydney-26',    city:'Sydney',          country:'Australia', flag:'🇦🇺', date:'2026-03-07', venue:'ICC Sydney',           region:'APAC'},
+  {id:'brisbane-26',  city:'Brisbane',        country:'Australia', flag:'🇦🇺', date:'2026-04-09', venue:'Brisbane Convention',  region:'APAC'},
+];
+
+// Active competition (user-selected, falls back to next future SAM race)
+let ACTIVE_RACE = null;
+let USER_RACES  = [];   // races the user has added to their agenda
+
+function getNextRace(){
+  const today = todayStr();
+  // Prefer user-selected active race
+  if(ACTIVE_RACE) return ACTIVE_RACE;
+  // Otherwise find next future SAM race
+  return HYROX_RACES.filter(r=>r.date>=today&&r.region==='SAM').sort((a,b)=>a.date.localeCompare(b.date))[0]
+      || HYROX_RACES.filter(r=>r.date>=today).sort((a,b)=>a.date.localeCompare(b.date))[0]
+      || HYROX_RACES[0];
+}
+
+// Days to a specific race date string
+function daysToDate(dateStr){
+  const n=new Date(); n.setHours(0,0,0,0);
+  const c=new Date(dateStr+'T12:00:00'); c.setHours(0,0,0,0);
+  return Math.max(0, Math.ceil((c-n)/86400000));
+}
+
+// ================================================================
 // CONSTANTS
 // ================================================================
-const COMP_DATE = new Date('2026-06-13T08:00:00');
-
 const TYPE_LABELS = {
   run:'🏃 Carrera',tempo:'⚡ Tempo Run',intervals:'🔥 Intervalos',
   skierg:'❄️ SkiErg',row:'🚣 Remo',bike:'🚴 Bike Erg',sled:'🛷 Sled Push/Pull',
@@ -457,6 +540,8 @@ let PROFILE = {};
 let PRS = {};
 let GOALS = {};
 let _pftN = 0;
+// USER_RACES: races the user has bookmarked with their goals/results
+USER_RACES = JSON.parse(localStorage.getItem('hyrox_user_races')||'[]');
 
 // ================================================================
 // AUTH
@@ -511,23 +596,47 @@ async function signOut(){
 // ================================================================
 // INIT — Auth state listener
 // ================================================================
+// Flags to prevent multiple simultaneous auth state calls from conflicting.
+// onAuthStateChange fires for INITIAL_SESSION, TOKEN_REFRESHED, etc.
+// Without guards, a secondary null-session event can hide the loading overlay
+// mid-load and leave the app stuck.
+let _appReady = false;
+let _appLoading = false;
+
 sb.auth.onAuthStateChange(async (event, session) => {
-  if(session?.user){
+  // Once the app is running, only react to explicit sign-in/out events
+  if(_appReady && event !== 'SIGNED_OUT' && event !== 'SIGNED_IN') return;
+  // Prevent concurrent initializations
+  if(_appLoading) return;
+
+  if(session?.user) {
+    _appLoading = true;
     USER = session.user;
-    document.getElementById('auth-screen').style.display='none';
-    document.getElementById('loading-overlay').style.display='flex';
-    await loadAllData();
-    document.getElementById('loading-overlay').style.display='none';
-    document.getElementById('app-screen').style.display='block';
+    document.getElementById('auth-screen').style.display = 'none';
+    document.getElementById('loading-overlay').style.display = 'flex';
+    try { await loadAllData(); } catch(e) { console.error('loadAllData error:', e); }
+    // Load races from localStorage (client-side, no DB needed)
+    loadUserRaces();
+    // Seed Buenos Aires 2025 if user has no races yet
+    if(USER_RACES.length === 0){
+      addRace('bsas-2025');
+    }
+    document.getElementById('loading-overlay').style.display = 'none';
+    document.getElementById('app-screen').style.display = 'block';
     document.getElementById('sidebar-user').textContent = USER.email;
     initLogDate();
     renderCountdown();
     renderDashboard();
     renderStations();
-  } else {
-    document.getElementById('loading-overlay').style.display='none';
-    document.getElementById('auth-screen').style.display='flex';
-    document.getElementById('app-screen').style.display='none';
+    _appReady = true;
+    _appLoading = false;
+  } else if (event === 'SIGNED_OUT' || !_appReady) {
+    // Only show auth on explicit sign-out, or on initial load with no session
+    _appLoading = false;
+    _appReady = true;
+    document.getElementById('loading-overlay').style.display = 'none';
+    document.getElementById('auth-screen').style.display = 'flex';
+    document.getElementById('app-screen').style.display = 'none';
   }
 });
 
@@ -568,7 +677,10 @@ async function loadStationRecords(){
 // ================================================================
 // COMPETITION & PHASE
 // ================================================================
-function daysToComp(){ const n=new Date();n.setHours(0,0,0,0);const c=new Date(COMP_DATE);c.setHours(0,0,0,0);return Math.max(0,Math.ceil((c-n)/86400000)); }
+function daysToComp(){
+  const race = getNextRace();
+  return race ? daysToDate(race.date) : 0;
+}
 function getPhase(d){
   if(d>70)  return {name:'Base / Volumen',   color:'var(--blue)',   desc:'Base aeróbica y fuerza funcional'};
   if(d>42)  return {name:'Específica',       color:'var(--purple)', desc:'Intensificar estaciones y tempo'};
@@ -577,15 +689,20 @@ function getPhase(d){
   return          {name:'Race Week',         color:'var(--accent2)','desc':'Activaciones y preparación mental'};
 }
 function renderCountdown(){
-  const d=daysToComp(); const ph=getPhase(d);
+  const race = getNextRace();
+  const d = race ? daysToDate(race.date) : 0;
+  const ph = getPhase(d);
+  const raceName = race ? `${race.flag} ${race.city}, ${race.country}` : 'Sin carrera';
+  const raceDate = race ? fmtDate(race.date) : '—';
+
   const sc=document.getElementById('sidebar-countdown');
-  if(sc) sc.innerHTML=`<div class="days">${d}</div><div class="clbl">días para BsAs 🇦🇷</div>`;
+  if(sc) sc.innerHTML=`<div class="days">${d}</div><div class="clbl">días · ${race?.flag||'🏆'} ${race?.city||'—'}</div>`;
   const cb=document.getElementById('comp-bar');
   if(cb) cb.innerHTML=`
     <div class="cb-days">${d}</div>
     <div class="cb-info">
-      <div class="cb-title">🏆 Hyrox Buenos Aires — 13 de junio 2026</div>
-      <div class="cb-sub">Cada sesión te acerca al resultado que querés.</div>
+      <div class="cb-title">🏆 Hyrox ${race?.city||'—'} — ${raceDate}</div>
+      <div class="cb-sub">Cada sesión te acerca al resultado que querés. <a href="#" onclick="showPage('races');return false;" style="color:var(--accent);font-size:11px">Cambiar carrera →</a></div>
       <div style="margin-top:5px"><span class="badge" style="background:rgba(0,0,0,.3);color:${ph.color};border:1px solid ${ph.color}50">${ph.name}</span> <span style="color:var(--muted);font-size:11px">${ph.desc}</span></div>
     </div>
     <div style="text-align:right">
@@ -601,13 +718,14 @@ function showPage(p){
   document.querySelectorAll('[id^="page-"]').forEach(e=>e.classList.add('hidden'));
   document.getElementById('page-'+p).classList.remove('hidden');
   document.querySelectorAll('.nav-item').forEach(e=>e.classList.remove('active'));
-  ['dashboard','log','history','suggestions','stations','profile'].forEach((pg,i)=>{
+  ['dashboard','log','history','suggestions','stations','races','profile'].forEach((pg,i)=>{
     if(pg===p) document.querySelectorAll('.nav-item')[i].classList.add('active');
   });
-  if(p==='dashboard') renderDashboard();
-  if(p==='history')   renderHistory();
-  if(p==='stations')  renderStations();
-  if(p==='profile')   renderProfile();
+  if(p==='dashboard')  renderDashboard();
+  if(p==='history')    renderHistory();
+  if(p==='stations')   renderStations();
+  if(p==='profile')    renderProfile();
+  if(p==='races')      renderRaces();
   if(p==='suggestions'){
     const out=document.getElementById('suggestions-output');
     document.getElementById('suggestions-empty').classList[out.innerHTML?'add':'remove']('hidden');
@@ -725,9 +843,11 @@ async function logWorkout(){
 }
 
 function buildEvalPrompt(w,d,ph){
+  const race = getNextRace();
+  const raceLabel = race ? `${race.city}, ${race.country} (${fmtDate(race.date)})` : 'próxima carrera';
   return `Coach Hyrox élite. Evaluá esta sesión de atleta AVANZADO (2+ años, competencias, 6d/semana).
 
-COMPETENCIA: Buenos Aires 13/6/2026 — ${d} días | FASE: ${ph.name} — ${ph.desc}
+COMPETENCIA OBJETIVO: ${raceLabel} — ${d} días | FASE: ${ph.name} — ${ph.desc}
 PRIORIDADES: SkiErg/Remo/Bike, Sled Push/Pull, Burpees/Wall Balls, Sandbag/Farmers
 ${buildPRSummary()}
 
@@ -809,9 +929,11 @@ async function logPFT(){
   setEvalState('loading');
 
   const d=daysToComp();const ph=getPhase(d);
+  const race=getNextRace();
+  const raceLabel=race?`${race.city} (${fmtDate(race.date)})`:'próxima carrera';
   const bd=blocks.map((b,i)=>`  ${i+1}. ${TYPE_LABELS[b.exercise]||b.exercise} — ${b.amount} — ⏱️${b.time}${b.note?' ('+b.note+')':''}`).join('\n');
   const prompt=`Coach Hyrox élite. PFT de atleta AVANZADO.
-COMPETENCIA: Buenos Aires ${d} días | FASE: ${ph.name}
+COMPETENCIA: ${raceLabel} — ${d} días | FASE: ${ph.name}
 ${buildPRSummary()}
 SESIÓN PFT: ${fmtDate(date)} | ${dur}min | RPE: ${rpe}/10 | ${FEELINGS[feeling]}
 Bloques:\n${bd}
@@ -891,7 +1013,9 @@ async function deleteW(id){
 async function getSuggestions(){
   setSugState('loading');
   const d=daysToComp();const ph=getPhase(d);
-  const prompt=`Coach Hyrox élite. Plan semanal 6 días para atleta AVANZADO → Buenos Aires 13/6/2026.
+  const race=getNextRace();
+  const raceLabel=race?`${race.city}, ${race.country} (${fmtDate(race.date)})`:'próxima carrera';
+  const prompt=`Coach Hyrox élite. Plan semanal 6 días para atleta AVANZADO → ${raceLabel}.
 FALTAN: ${d} días | FASE: ${ph.name} — ${ph.desc}
 PRIORIDADES: SkiErg/Remo/Bike, Sled, Burpees/Wall Balls, Sandbag/Farmers
 ${buildPRSummary()}
@@ -905,7 +1029,9 @@ JSON sin markdown: {"plan":[{"day":"Lunes","name":"...","type":"...","duration":
 async function getNextWorkout(){
   setSugState('loading');
   const d=daysToComp();const ph=getPhase(d);
-  const prompt=`Coach Hyrox. Próxima sesión para atleta avanzado. ${d} días para Buenos Aires. Fase: ${ph.name}. Historial: ${buildHistorySummary()||'Sin historial.'}
+  const race=getNextRace();
+  const raceLabel=race?`${race.city} (${fmtDate(race.date)})`:'próxima carrera';
+  const prompt=`Coach Hyrox. Próxima sesión para atleta avanzado. ${d} días para ${raceLabel}. Fase: ${ph.name}. Historial: ${buildHistorySummary()||'Sin historial.'}
 JSON sin markdown: {"day":"Hoy","name":"...","type":"...","duration":"...","description":"...","why":"...","intensity":"Alta|Media|Baja"}`;
   try{const r=await callClaude(prompt);const p=JSON.parse(r.replace(/```json|```/g,'').trim());setSugState('done');renderSuggestions([p]);}
   catch(e){setSugState('error');}
@@ -914,7 +1040,9 @@ JSON sin markdown: {"day":"Hoy","name":"...","type":"...","duration":"...","desc
 async function getPhaseAdvice(){
   setSugState('loading');
   const d=daysToComp();const ph=getPhase(d);
-  const prompt=`Coach Hyrox. Consejo estratégico para atleta avanzado 6d/semana. Buenos Aires 13/6/2026 — ${d} días. Fase: ${ph.name}.
+  const race=getNextRace();
+  const raceLabel=race?`${race.city}, ${race.country} — ${fmtDate(race.date)}`:'próxima carrera';
+  const prompt=`Coach Hyrox. Consejo estratégico para atleta avanzado 6d/semana. Objetivo: ${raceLabel} — ${d} días. Fase: ${ph.name}.
 Prioridades: SkiErg/Remo/Bike, Sled, Burpees/Wall Balls, Sandbag/Farmers.
 Historial: ${buildHistorySummary()||'Sin historial.'}
 1. Qué priorizar 2. Errores típicos de esta fase 3. Distribución 6 días 4. Indicadores de progreso.
@@ -986,12 +1114,154 @@ async function stationTips(key){
   const s=STATIONS.find(x=>x.key===key);if(!s) return;
   const el=document.getElementById('sai-'+key);
   const d=daysToComp();const ph=getPhase(d);
+  const race=getNextRace();
+  const raceCity=race?race.city:'la competencia';
   el.innerHTML=`<div class="ai-thinking" style="padding:10px">Cargando <div class="dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div></div>`;
-  const prompt=`Coach Hyrox élite. 3 consejos de alto nivel para ${s.name} (${s.dist}) para atleta avanzado con ${d} días para Buenos Aires. Fase: ${ph.name}.
-${PRS[key]?'PR: '+PRS[key]:'Sin PR'}.${GOALS[key]?' Objetivo BsAs: '+GOALS[key]:''}
+  const prompt=`Coach Hyrox élite. 3 consejos de alto nivel para ${s.name} (${s.dist}) para atleta avanzado con ${d} días para ${raceCity}. Fase: ${ph.name}.
+${PRS[key]?'PR: '+PRS[key]:'Sin PR'}.${GOALS[key]?' Objetivo: '+GOALS[key]:''}
 Cubrí: técnica de competencia, estrategia de ritmo en carrera Hyrox, cómo entrenarla en esta fase. Máx 150 palabras.`;
   try{const r=await callClaude(prompt);el.innerHTML=`<div class="ai-box"><div class="ai-header"><span>🤖</span><span>${s.icon} ${s.name}</span></div><div class="ai-content">${r}</div></div>`;}
   catch(e){el.innerHTML='<p style="color:var(--muted);font-size:13px">Error.</p>';}
+}
+
+// ================================================================
+// RACES
+// ================================================================
+let _racesFilter = 'all';
+
+function renderRaces(){
+  renderMyRaces();
+  renderRacesCatalog();
+}
+
+function renderMyRaces(){
+  const el = document.getElementById('my-races-list');
+  if(!USER_RACES.length){
+    el.innerHTML='<p style="color:var(--muted);font-size:13px">No tenés carreras agendadas. Agregá desde el catálogo de abajo.</p>';
+    return;
+  }
+  const sorted = [...USER_RACES].sort((a,b)=>a.date.localeCompare(b.date));
+  el.innerHTML = sorted.map(ur => {
+    const race = HYROX_RACES.find(r=>r.id===ur.id)||ur;
+    const days = daysToDate(race.date);
+    const isPast = days === 0 && new Date(race.date+'T12:00:00') < new Date();
+    const isActive = ACTIVE_RACE?.id === race.id;
+    return `<div class="my-race-card ${isActive?'is-active-race':''}">
+      <div class="race-flag">${race.flag}</div>
+      <div class="race-info">
+        <div class="race-city">${isActive?'⭐ ':''}${race.city}, ${race.country}</div>
+        <div class="race-meta">${fmtDate(race.date)} ${ur.category?'· '+ur.category:''} ${ur.goalTime?'· Objetivo: '+ur.goalTime:''}</div>
+        ${ur.result?`<div style="margin-top:4px"><span class="badge badge-green">✅ Resultado: ${ur.result}</span></div>`:''}
+      </div>
+      <div style="text-align:right;flex-shrink:0">
+        ${isPast
+          ? `<div style="font-size:11px;color:var(--muted);margin-bottom:4px">Completada</div>`
+          : `<div style="font-size:18px;font-weight:900;color:${days<30?'var(--accent2)':days<60?'var(--accent)':'var(--green)'}">${days}</div><div style="font-size:10px;color:var(--muted)">días</div>`
+        }
+      </div>
+      <div class="race-actions">
+        ${!isActive&&!isPast?`<button class="btn btn-primary btn-sm" onclick="setActiveRace('${race.id}')">⭐ Principal</button>`:''}
+        ${isPast&&!ur.result?`<button class="btn btn-secondary btn-sm" onclick="addResult('${race.id}')">📝 Resultado</button>`:''}
+        <button class="btn btn-danger btn-sm" onclick="removeRace('${race.id}')">✕</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderRacesCatalog(){
+  const today = todayStr();
+  let races = HYROX_RACES;
+  if(_racesFilter !== 'all') races = races.filter(r=>r.region===_racesFilter);
+
+  document.getElementById('races-catalog').innerHTML = races.map(r => {
+    const days = daysToDate(r.date);
+    const isPast = r.date < today;
+    const isAdded = USER_RACES.some(ur=>ur.id===r.id);
+    const isActive = ACTIVE_RACE?.id === r.id;
+    return `<div class="race-card ${isActive?'is-active':''} ${isPast?'is-past':''}">
+      <div class="race-flag">${r.flag}</div>
+      <div class="race-info">
+        <div class="race-city">${r.city}, ${r.country} ${isActive?'<span class="badge badge-yellow" style="font-size:10px">Principal</span>':''}</div>
+        <div class="race-meta">${fmtDate(r.date)} · ${r.venue}</div>
+      </div>
+      <div class="race-days" style="color:${isPast?'var(--muted)':days<30?'var(--accent2)':days<60?'var(--accent)':'var(--green)'}">
+        ${isPast?'Pasada':days+'d'}
+      </div>
+      <div class="race-actions">
+        ${isAdded
+          ? `<span class="badge badge-green" style="font-size:11px">✓ Agendada</span>`
+          : `<button class="btn btn-secondary btn-sm" onclick="addRace('${r.id}')">+ Agregar</button>`
+        }
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function filterRaces(region, btn){
+  _racesFilter = region;
+  document.querySelectorAll('.race-filter').forEach(b=>b.classList.remove('active-filter'));
+  btn.classList.add('active-filter');
+  renderRacesCatalog();
+}
+
+function addRace(id){
+  if(USER_RACES.some(r=>r.id===id)) return;
+  const race = HYROX_RACES.find(r=>r.id===id);
+  if(!race) return;
+  USER_RACES.push({id, date:race.date, city:race.city, country:race.country, flag:race.flag, category:'', goalTime:'', result:null});
+  saveUserRaces();
+  // Auto-set as active if it's the only race or the next upcoming
+  if(USER_RACES.length===1 || !ACTIVE_RACE){
+    setActiveRace(id);
+  }
+  renderRaces();
+  renderDashboard();
+  toast(`✅ ${race.flag} ${race.city} agregada a tu agenda`);
+}
+
+function removeRace(id){
+  USER_RACES = USER_RACES.filter(r=>r.id!==id);
+  if(ACTIVE_RACE?.id === id){
+    // Switch to next upcoming race
+    const next = USER_RACES.filter(r=>r.date>=todayStr()).sort((a,b)=>a.date.localeCompare(b.date))[0];
+    ACTIVE_RACE = next ? HYROX_RACES.find(r=>r.id===next.id)||next : null;
+    localStorage.setItem('hyrox_active_race', ACTIVE_RACE?.id||'');
+  }
+  saveUserRaces();
+  renderRaces();
+  renderDashboard();
+}
+
+function setActiveRace(id){
+  const race = HYROX_RACES.find(r=>r.id===id);
+  if(!race) return;
+  ACTIVE_RACE = race;
+  localStorage.setItem('hyrox_active_race', id);
+  renderRaces();
+  renderDashboard();
+  toast(`⭐ ${race.flag} ${race.city} es ahora tu carrera principal`);
+}
+
+function addResult(id){
+  const result = prompt('Ingresá tu tiempo/resultado (ej: 1:12:34):');
+  if(!result) return;
+  const ur = USER_RACES.find(r=>r.id===id);
+  if(ur) { ur.result = result; saveUserRaces(); renderRaces(); toast('✅ Resultado guardado'); }
+}
+
+function saveUserRaces(){
+  localStorage.setItem('hyrox_user_races', JSON.stringify(USER_RACES));
+}
+
+function loadUserRaces(){
+  USER_RACES = JSON.parse(localStorage.getItem('hyrox_user_races')||'[]');
+  const activeId = localStorage.getItem('hyrox_active_race');
+  ACTIVE_RACE = activeId ? (HYROX_RACES.find(r=>r.id===activeId)||null) : null;
+  // If no active race set, auto-pick next upcoming from user's agenda
+  if(!ACTIVE_RACE && USER_RACES.length){
+    const next = USER_RACES.filter(r=>r.date>=todayStr()).sort((a,b)=>a.date.localeCompare(b.date))[0];
+    if(next) ACTIVE_RACE = HYROX_RACES.find(r=>r.id===next.id)||null;
+  }
 }
 
 // ================================================================
