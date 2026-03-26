@@ -1,0 +1,1102 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Hyrox AI Coach — Buenos Aires 2025</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{
+  --bg:#0a0a0f;--surface:#13131a;--surface2:#1c1c28;--border:#2a2a3d;
+  --accent:#f0b429;--accent2:#e84d4d;--text:#e8e8f0;--muted:#7a7a9a;
+  --green:#22c55e;--blue:#3b82f6;--purple:#a855f7;
+  --radius:12px;--font:'Segoe UI',system-ui,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:100vh;}
+
+/* ── AUTH SCREEN ── */
+#auth-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px;}
+.auth-card{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:36px;width:100%;max-width:420px;}
+.auth-logo{text-align:center;margin-bottom:28px;}
+.auth-logo h1{font-size:28px;font-weight:900;color:var(--accent);letter-spacing:2px;}
+.auth-logo p{color:var(--muted);font-size:13px;margin-top:4px;}
+.auth-tabs{display:flex;gap:3px;background:var(--surface2);border-radius:9px;padding:3px;margin-bottom:22px;}
+.auth-tab{flex:1;text-align:center;padding:8px;border-radius:7px;cursor:pointer;font-size:13px;font-weight:600;color:var(--muted);transition:all .2s;}
+.auth-tab.active{background:var(--accent);color:#0a0a0f;}
+.auth-error{background:rgba(232,77,77,.1);border:1px solid rgba(232,77,77,.3);border-radius:8px;padding:10px 14px;font-size:13px;color:var(--accent2);margin-bottom:14px;}
+.auth-success{background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);border-radius:8px;padding:10px 14px;font-size:13px;color:var(--green);margin-bottom:14px;}
+
+/* ── APP LAYOUT ── */
+#app-screen{display:none;}
+.app{display:flex;min-height:100vh;}
+.sidebar{width:230px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:20px 0;position:fixed;top:0;bottom:0;left:0;z-index:10;overflow-y:auto;}
+.logo{padding:0 18px 16px;border-bottom:1px solid var(--border);}
+.logo h1{font-size:18px;font-weight:800;color:var(--accent);letter-spacing:1px;}
+.logo .sub{font-size:10px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-top:2px;}
+.comp-countdown{margin:10px 14px 0;background:rgba(240,180,41,.1);border:1px solid rgba(240,180,41,.3);border-radius:8px;padding:8px 12px;}
+.comp-countdown .days{font-size:22px;font-weight:900;color:var(--accent);}
+.comp-countdown .clbl{color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:1px;}
+nav{padding:12px 0;flex:1;}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 18px;cursor:pointer;color:var(--muted);font-size:13px;font-weight:500;border-left:3px solid transparent;transition:all .2s;}
+.nav-item:hover{color:var(--text);background:var(--surface2);}
+.nav-item.active{color:var(--accent);border-left-color:var(--accent);background:rgba(240,180,41,.08);}
+.nav-icon{font-size:16px;width:20px;text-align:center;}
+.sidebar-footer{padding:12px 18px;border-top:1px solid var(--border);}
+.user-info{font-size:12px;color:var(--muted);margin-bottom:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.main{margin-left:230px;flex:1;padding:28px;max-width:calc(100vw - 230px);}
+
+/* ── LOADING OVERLAY ── */
+#loading-overlay{position:fixed;inset:0;background:var(--bg);z-index:200;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:14px;}
+#loading-overlay .lo-icon{font-size:44px;}
+#loading-overlay p{color:var(--muted);font-size:14px;}
+
+/* ── COMMON COMPONENTS ── */
+.page-header{margin-bottom:22px;}
+.page-header h2{font-size:24px;font-weight:800;}
+.page-header p{color:var(--muted);margin-top:4px;font-size:13px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;}
+.card-title{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:10px;}
+.grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px;}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;}
+.stat-card .val{font-size:30px;font-weight:800;}
+.stat-card .lbl{font-size:11px;color:var(--muted);margin-top:3px;text-transform:uppercase;letter-spacing:.8px;}
+.badge{display:inline-block;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;}
+.badge-yellow{background:rgba(240,180,41,.15);color:var(--accent);}
+.badge-green{background:rgba(34,197,94,.15);color:var(--green);}
+.badge-red{background:rgba(232,77,77,.15);color:var(--accent2);}
+.badge-purple{background:rgba(168,85,247,.15);color:var(--purple);}
+.btn{display:inline-flex;align-items:center;gap:7px;padding:9px 18px;border-radius:8px;border:none;cursor:pointer;font-weight:700;font-size:13px;font-family:var(--font);transition:all .2s;}
+.btn-primary{background:var(--accent);color:#0a0a0f;}
+.btn-primary:hover{background:#f7c948;}
+.btn-primary:disabled{opacity:.5;cursor:not-allowed;}
+.btn-secondary{background:var(--surface2);color:var(--text);border:1px solid var(--border);}
+.btn-secondary:hover{border-color:var(--accent);color:var(--accent);}
+.btn-danger{background:rgba(232,77,77,.1);color:var(--accent2);border:1px solid rgba(232,77,77,.25);}
+.btn-sm{padding:5px 12px;font-size:12px;}
+.form-group{margin-bottom:13px;}
+label{display:block;font-size:12px;font-weight:600;color:var(--muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:.5px;}
+input,select,textarea{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:var(--font);font-size:14px;padding:9px 12px;outline:none;transition:border .2s;}
+input:focus,select:focus,textarea:focus{border-color:var(--accent);}
+textarea{resize:vertical;min-height:70px;}
+select option{background:var(--surface2);}
+.slider-wrap{display:flex;align-items:center;gap:10px;}
+input[type=range]{-webkit-appearance:none;height:5px;background:var(--border);border-radius:3px;padding:0;flex:1;}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;background:var(--accent);border-radius:50%;cursor:pointer;}
+.slider-val{min-width:24px;text-align:center;font-weight:800;color:var(--accent);}
+.workout-item{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:13px 16px;margin-bottom:9px;display:flex;align-items:flex-start;gap:12px;transition:border .2s;}
+.workout-item:hover{border-color:rgba(240,180,41,.35);}
+.workout-icon{font-size:22px;width:38px;height:38px;display:flex;align-items:center;justify-content:center;background:var(--surface2);border-radius:8px;flex-shrink:0;}
+.workout-info{flex:1;min-width:0;}
+.workout-name{font-weight:700;font-size:14px;}
+.workout-meta{color:var(--muted);font-size:12px;margin-top:2px;}
+.workout-actions{display:flex;gap:6px;align-items:center;flex-shrink:0;}
+.ai-box{background:linear-gradient(135deg,rgba(240,180,41,.05),rgba(59,130,246,.05));border:1px solid rgba(240,180,41,.2);border-radius:var(--radius);padding:15px;margin-top:13px;}
+.ai-header{display:flex;align-items:center;gap:7px;margin-bottom:7px;}
+.ai-header span{font-weight:700;font-size:13px;color:var(--accent);}
+.ai-content{font-size:13px;line-height:1.75;color:var(--text);white-space:pre-wrap;}
+.ai-thinking{color:var(--muted);font-style:italic;display:flex;align-items:center;gap:8px;font-size:13px;}
+.dots{display:inline-flex;gap:4px;}
+.dot{width:5px;height:5px;background:var(--accent);border-radius:50%;animation:bounce .8s infinite;}
+.dot:nth-child(2){animation-delay:.15s;}.dot:nth-child(3){animation-delay:.3s;}
+@keyframes bounce{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-4px)}}
+.prog-bar{height:7px;background:var(--border);border-radius:4px;overflow:hidden;margin-top:4px;}
+.prog-fill{height:100%;border-radius:4px;background:var(--accent);transition:width .4s;}
+.station-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:11px;}
+.station-card{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:13px;text-align:center;cursor:pointer;transition:all .2s;}
+.station-card:hover{border-color:var(--accent);background:rgba(240,180,41,.07);}
+.tabs{display:flex;gap:3px;background:var(--surface2);border-radius:9px;padding:3px;margin-bottom:16px;width:fit-content;}
+.tab{padding:7px 15px;border-radius:7px;cursor:pointer;font-size:12px;font-weight:600;color:var(--muted);transition:all .2s;}
+.tab.active{background:var(--accent);color:#0a0a0f;}
+.week-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;}
+.day-cell{background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:8px 4px;text-align:center;}
+.day-cell.has-workout{border-color:var(--accent);background:rgba(240,180,41,.08);}
+.day-cell .dn{font-size:9px;color:var(--muted);font-weight:700;text-transform:uppercase;}
+.day-cell .dv{font-size:16px;font-weight:800;margin:3px 0;}
+.day-cell .dd{width:5px;height:5px;background:var(--accent);border-radius:50%;margin:0 auto;}
+::-webkit-scrollbar{width:5px;}::-webkit-scrollbar-track{background:transparent;}::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+.hidden{display:none!important;}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:100;display:flex;align-items:center;justify-content:center;padding:14px;}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:22px;width:100%;max-width:600px;max-height:92vh;overflow-y:auto;}
+.modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;}
+.modal-header h3{font-size:18px;font-weight:800;}
+.close-btn{background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;}
+.pft-block{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:13px;margin-bottom:9px;position:relative;}
+.pft-block .rm{position:absolute;top:9px;right:9px;background:none;border:none;color:var(--muted);cursor:pointer;font-size:15px;}
+.pft-block .rm:hover{color:var(--accent2);}
+.pft-grid{display:grid;grid-template-columns:2fr 1fr 1fr;gap:9px;}
+.pr-card{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:13px;}
+.comp-bar{background:linear-gradient(90deg,rgba(240,180,41,.12),rgba(232,77,77,.08));border:1px solid rgba(240,180,41,.25);border-radius:var(--radius);padding:14px 18px;margin-bottom:20px;display:flex;align-items:center;gap:18px;flex-wrap:wrap;}
+.comp-bar .cb-days{font-size:34px;font-weight:900;color:var(--accent);line-height:1;}
+.comp-bar .cb-info{flex:1;}
+.comp-bar .cb-title{font-weight:800;font-size:14px;}
+.comp-bar .cb-sub{font-size:12px;color:var(--muted);margin-top:1px;}
+.suggest-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:15px;margin-bottom:11px;}
+.suggest-card .sh{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:7px;}
+.suggest-card .st{font-weight:800;font-size:15px;}
+.suggest-card .sb{color:var(--muted);font-size:13px;line-height:1.65;}
+.saving-indicator{position:fixed;top:16px;right:16px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 14px;font-size:12px;color:var(--muted);z-index:50;display:flex;align-items:center;gap:6px;}
+
+@media(max-width:900px){
+  .sidebar{width:54px;}.nav-item span,.logo h1,.logo .sub,.comp-countdown,.sidebar-footer .user-info{display:none;}
+  .main{margin-left:54px;padding:14px;max-width:calc(100vw - 54px);}
+  .grid-4,.station-grid{grid-template-columns:repeat(2,1fr);}
+  .grid-2,.grid-3{grid-template-columns:1fr;}
+  .week-grid{grid-template-columns:repeat(4,1fr);}
+  .pft-grid{grid-template-columns:1fr;}
+}
+</style>
+</head>
+<body>
+
+<!-- LOADING -->
+<div id="loading-overlay">
+  <div class="lo-icon">⚡</div>
+  <p>Cargando Hyrox Coach...</p>
+</div>
+
+<!-- AUTH SCREEN -->
+<div id="auth-screen" style="display:none">
+  <div class="auth-card">
+    <div class="auth-logo">
+      <h1>⚡ HYROX</h1>
+      <p>AI Coach — Buenos Aires 2025</p>
+    </div>
+    <div class="auth-tabs">
+      <div class="auth-tab active" onclick="switchAuthTab('login')">Iniciar sesión</div>
+      <div class="auth-tab" onclick="switchAuthTab('register')">Registrarse</div>
+    </div>
+    <div id="auth-error" class="auth-error hidden"></div>
+    <div id="auth-success" class="auth-success hidden"></div>
+    <div class="form-group"><label>Email</label><input type="email" id="auth-email" placeholder="tu@email.com"/></div>
+    <div class="form-group"><label>Contraseña</label><input type="password" id="auth-password" placeholder="Mínimo 6 caracteres" onkeydown="if(event.key==='Enter')authAction()"/></div>
+    <button class="btn btn-primary" id="auth-btn" onclick="authAction()" style="width:100%;justify-content:center">Entrar</button>
+    <p style="font-size:12px;color:var(--muted);text-align:center;margin-top:14px">
+      Tus datos se guardan de forma segura en tu cuenta. Solo vos podés verlos.
+    </p>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app-screen">
+<div class="app">
+
+<aside class="sidebar">
+  <div class="logo">
+    <h1>⚡ HYROX</h1>
+    <div class="sub">AI Coach</div>
+  </div>
+  <div class="comp-countdown" id="sidebar-countdown"></div>
+  <nav>
+    <div class="nav-item active" onclick="showPage('dashboard')"><span class="nav-icon">🏠</span><span>Dashboard</span></div>
+    <div class="nav-item" onclick="showPage('log')"><span class="nav-icon">📝</span><span>Cargar Entrenamiento</span></div>
+    <div class="nav-item" onclick="showPage('history')"><span class="nav-icon">📊</span><span>Historial</span></div>
+    <div class="nav-item" onclick="showPage('suggestions')"><span class="nav-icon">🤖</span><span>Plan IA</span></div>
+    <div class="nav-item" onclick="showPage('stations')"><span class="nav-icon">🎯</span><span>Estaciones</span></div>
+    <div class="nav-item" onclick="showPage('profile')"><span class="nav-icon">👤</span><span>Mi Perfil</span></div>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="user-info" id="sidebar-user"></div>
+    <button class="btn btn-secondary btn-sm" onclick="signOut()" style="width:100%;justify-content:center">🚪 Salir</button>
+  </div>
+</aside>
+
+<main class="main">
+
+<!-- DASHBOARD -->
+<div id="page-dashboard">
+  <div class="page-header">
+    <h2>Dashboard 🏃</h2>
+    <p><span class="badge badge-yellow">⚡ Avanzado · 6 días/semana</span></p>
+  </div>
+  <div class="comp-bar" id="comp-bar"></div>
+  <div class="grid-4">
+    <div class="stat-card"><div class="lbl">Total sesiones</div><div class="val" id="stat-total">—</div></div>
+    <div class="stat-card"><div class="lbl">Esta semana</div><div class="val" id="stat-week">—</div></div>
+    <div class="stat-card"><div class="lbl">Minutos totales</div><div class="val" id="stat-minutes">—</div></div>
+    <div class="stat-card"><div class="lbl">RPE promedio</div><div class="val" id="stat-rpe">—</div></div>
+  </div>
+  <div class="grid-2" style="margin-bottom:16px">
+    <div class="card"><div class="card-title">Semana actual</div><div class="week-grid" id="week-calendar" style="margin-top:8px"></div></div>
+    <div class="card"><div class="card-title">Distribución</div><div id="type-breakdown" style="margin-top:8px"></div></div>
+  </div>
+  <div class="card"><div class="card-title">Últimas sesiones</div><div id="recent-workouts" style="margin-top:8px"><div class="ai-thinking">Cargando <div class="dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div></div></div></div>
+</div>
+
+<!-- LOG -->
+<div id="page-log" class="hidden">
+  <div class="page-header"><h2>Cargar Entrenamiento 📝</h2></div>
+  <div class="tabs" id="log-tabs">
+    <div class="tab active" onclick="switchLogTab('standard')">Estándar</div>
+    <div class="tab" onclick="switchLogTab('pft')">🏆 PFT (Hyrox Training)</div>
+  </div>
+  <div class="grid-2">
+    <div>
+      <div id="form-standard" class="card">
+        <div class="form-group"><label>Tipo</label>
+          <select id="w-type">
+            <option value="">— Seleccioná —</option>
+            <option value="run">🏃 Carrera aeróbica</option>
+            <option value="tempo">⚡ Tempo Run</option>
+            <option value="intervals">🔥 Intervalos</option>
+            <option value="skierg">❄️ SkiErg</option>
+            <option value="row">🚣 Remo</option>
+            <option value="bike">🚴 Bike Erg</option>
+            <option value="sled">🛷 Sled Push/Pull</option>
+            <option value="burpee">💥 Burpee Broad Jump</option>
+            <option value="sandbag">🎒 Sandbag Lunges</option>
+            <option value="farmers">🏋️ Farmers Carry</option>
+            <option value="wallball">🏀 Wall Balls</option>
+            <option value="strength">💪 Fuerza general</option>
+            <option value="hyrox_sim">🏆 Simulacro Hyrox</option>
+            <option value="mobility">🧘 Movilidad/Recovery</option>
+            <option value="mixed">🔀 Mixto/Funcional</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Fecha</label><input type="date" id="w-date"/></div>
+        <div class="grid-2" style="gap:10px">
+          <div class="form-group"><label>Duración (min)</label><input type="number" id="w-duration" placeholder="60" min="1"/></div>
+          <div class="form-group"><label>Distancia (km)</label><input type="number" id="w-distance" placeholder="5.0" step="0.1"/></div>
+        </div>
+        <div class="form-group">
+          <label>RPE (1–10)</label>
+          <div class="slider-wrap"><input type="range" id="w-rpe" min="1" max="10" value="7" oninput="rpe_val.textContent=this.value"/><span class="slider-val" id="rpe_val">7</span></div>
+          <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-top:2px"><span>Suave</span><span>Moderado</span><span>Máximo</span></div>
+        </div>
+        <div class="form-group"><label>Notas</label><textarea id="w-notes" placeholder="Tiempos, sensaciones, condiciones..."></textarea></div>
+        <div class="form-group"><label>Sensación</label>
+          <select id="w-feeling">
+            <option value="great">😄 Muy bien</option><option value="good">🙂 Bien</option>
+            <option value="ok">😐 Regular</option><option value="bad">😓 Mal</option><option value="terrible">💀 Muy mal</option>
+          </select>
+        </div>
+        <button class="btn btn-primary" id="log-btn" onclick="logWorkout()" style="width:100%">⚡ Registrar y Evaluar con IA</button>
+      </div>
+      <div id="form-pft" class="card hidden">
+        <div style="background:rgba(168,85,247,.08);border:1px solid rgba(168,85,247,.25);border-radius:8px;padding:11px;margin-bottom:14px;font-size:13px;color:var(--muted)">
+          <strong style="color:var(--purple)">🏆 Modo PFT</strong> — Cargá cada bloque para evaluación detallada.
+        </div>
+        <div class="form-group"><label>Fecha</label><input type="date" id="pft-date"/></div>
+        <div class="grid-2" style="gap:10px">
+          <div class="form-group"><label>Duración total (min)</label><input type="number" id="pft-duration" placeholder="90"/></div>
+          <div class="form-group">
+            <label>RPE general</label>
+            <div class="slider-wrap"><input type="range" id="pft-rpe" min="1" max="10" value="8" oninput="pftrpe_val.textContent=this.value"/><span class="slider-val" id="pftrpe_val">8</span></div>
+          </div>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:9px">
+          <label style="margin:0">Bloques</label>
+          <button class="btn btn-secondary btn-sm" onclick="addPftBlock()">+ Bloque</button>
+        </div>
+        <div id="pft-blocks"></div>
+        <div class="form-group" style="margin-top:12px"><label>Notas generales</label><textarea id="pft-notes" placeholder="Cómo fue la sesión general..."></textarea></div>
+        <div class="form-group"><label>Sensación</label>
+          <select id="pft-feeling">
+            <option value="great">😄 Muy bien</option><option value="good">🙂 Bien</option>
+            <option value="ok">😐 Regular</option><option value="bad">😓 Mal</option><option value="terrible">💀 Muy mal</option>
+          </select>
+        </div>
+        <button class="btn btn-primary" id="pft-btn" onclick="logPFT()" style="width:100%">⚡ Registrar PFT y Evaluar con IA</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Evaluación del Coach IA</div>
+      <div id="eval-placeholder" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:260px;color:var(--muted);text-align:center;gap:10px">
+        <div style="font-size:42px">🤖</div><p style="font-size:13px">Registrá tu sesión para recibir feedback orientado a Buenos Aires.</p>
+      </div>
+      <div id="eval-result" class="hidden"><div class="ai-box"><div class="ai-header"><span>🤖</span><span>Coach IA</span></div><div class="ai-content" id="eval-text"></div></div></div>
+      <div id="eval-loading" class="hidden" style="flex-direction:column;align-items:center;justify-content:center;min-height:180px;gap:12px">
+        <div style="font-size:32px">🤖</div>
+        <div class="ai-thinking">Evaluando sesión <div class="dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- HISTORY -->
+<div id="page-history" class="hidden">
+  <div class="page-header"><h2>Historial 📊</h2></div>
+  <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap">
+    <select id="filter-type" onchange="renderHistory()" style="width:180px">
+      <option value="">Todos los tipos</option>
+      <option value="pft">🏆 PFT</option><option value="run">Carrera</option>
+      <option value="intervals">Intervalos</option><option value="skierg">SkiErg</option>
+      <option value="row">Remo</option><option value="sled">Sled</option>
+      <option value="strength">Fuerza</option><option value="hyrox_sim">Simulacro</option>
+    </select>
+  </div>
+  <div id="history-list"><div class="ai-thinking">Cargando <div class="dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div></div></div>
+</div>
+
+<!-- SUGGESTIONS -->
+<div id="page-suggestions" class="hidden">
+  <div class="page-header"><h2>Plan del Coach IA 🤖</h2><p>Periodización orientada al 13 de junio en Buenos Aires</p></div>
+  <div style="display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap">
+    <button class="btn btn-primary" onclick="getSuggestions()">📅 Plan semanal</button>
+    <button class="btn btn-secondary" onclick="getNextWorkout()">🎯 Próxima sesión</button>
+    <button class="btn btn-secondary" onclick="getPhaseAdvice()">🗓️ Consejo de fase</button>
+  </div>
+  <div id="suggestions-loading" class="hidden">
+    <div style="display:flex;align-items:center;gap:14px;padding:20px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius)">
+      <div style="font-size:32px">🤖</div>
+      <div class="ai-thinking">Diseñando plan <div class="dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div></div>
+    </div>
+  </div>
+  <div id="suggestions-output"></div>
+  <div id="suggestions-empty" style="text-align:center;padding:40px 20px;color:var(--muted)">
+    <div style="font-size:50px;margin-bottom:12px">🤖</div>
+    <h3 style="color:var(--text);margin-bottom:7px">Coach IA listo</h3>
+    <p style="font-size:13px;max-width:360px;margin:0 auto">Pedí un plan semanal, la próxima sesión, o un consejo estratégico de fase.</p>
+    <button class="btn btn-primary" style="margin-top:16px" onclick="getSuggestions()">⚡ Generar plan</button>
+  </div>
+</div>
+
+<!-- STATIONS -->
+<div id="page-stations" class="hidden">
+  <div class="page-header"><h2>Estaciones 🎯</h2></div>
+  <div class="station-grid" id="stations-grid"></div>
+  <div style="margin-top:18px" id="station-detail"></div>
+</div>
+
+<!-- PROFILE -->
+<div id="page-profile" class="hidden">
+  <div class="page-header"><h2>Mi Perfil 👤</h2></div>
+  <div class="grid-2" style="margin-bottom:18px">
+    <div class="card">
+      <div class="card-title">Datos del atleta</div>
+      <div class="form-group"><label>Nombre</label><input type="text" id="p-name"/></div>
+      <div class="grid-2" style="gap:10px">
+        <div class="form-group"><label>Edad</label><input type="number" id="p-age"/></div>
+        <div class="form-group"><label>Peso (kg)</label><input type="number" id="p-weight"/></div>
+      </div>
+      <div class="form-group"><label>Categoría</label>
+        <select id="p-category">
+          <option value="open_m">Open Masculino</option><option value="open_w">Open Femenino</option>
+          <option value="pro_m">Pro Masculino</option><option value="pro_w">Pro Femenino</option>
+          <option value="m1">Masters 1 (40-44)</option><option value="m2">Masters 2 (45-49)</option>
+          <option value="m3">Masters 3 (50+)</option><option value="doubles">Doubles</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Objetivo tiempo total — Buenos Aires</label><input type="text" id="p-goal-time" placeholder="Ej: 1:10:00"/></div>
+      <div class="form-group"><label>Motivación</label><textarea id="p-notes" placeholder="¿Qué querés lograr en Buenos Aires?"></textarea></div>
+      <button class="btn btn-primary" id="save-profile-btn" onclick="saveProfile()" style="width:100%">💾 Guardar perfil</button>
+    </div>
+    <div class="card">
+      <div class="card-title">Objetivos por estación — Buenos Aires</div>
+      <div id="station-goals"></div>
+      <button class="btn btn-secondary btn-sm" id="save-goals-btn" onclick="saveProfile()" style="margin-top:10px;width:100%">💾 Guardar objetivos</button>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">Personal Records (PRs)</div>
+    <p style="font-size:12px;color:var(--muted);margin-bottom:13px">Tus mejores marcas — la IA las usa para calibrar el feedback.</p>
+    <div class="grid-3" id="pr-grid"></div>
+    <button class="btn btn-primary" id="save-prs-btn" onclick="savePRs()" style="margin-top:14px">💾 Guardar PRs</button>
+  </div>
+</div>
+
+</main>
+</div>
+</div>
+
+<!-- MODAL -->
+<div id="detail-modal" class="modal-overlay hidden">
+  <div class="modal">
+    <div class="modal-header"><h3 id="modal-title">Detalle</h3><button class="close-btn" onclick="closeModal()">✕</button></div>
+    <div id="modal-body"></div>
+  </div>
+</div>
+
+<div id="saving-indicator" class="saving-indicator hidden"><div class="dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div> Guardando...</div>
+
+<script>
+// ================================================================
+// CONFIG — Reemplazá estos valores con los tuyos de Supabase
+// ================================================================
+const SUPABASE_URL = window.SUPABASE_URL || 'TU_SUPABASE_URL';
+const SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY || 'TU_SUPABASE_ANON_KEY';
+
+const { createClient } = supabase;
+const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// ================================================================
+// CONSTANTS
+// ================================================================
+const COMP_DATE = new Date('2025-06-13T08:00:00');
+
+const TYPE_LABELS = {
+  run:'🏃 Carrera',tempo:'⚡ Tempo Run',intervals:'🔥 Intervalos',
+  skierg:'❄️ SkiErg',row:'🚣 Remo',bike:'🚴 Bike Erg',sled:'🛷 Sled Push/Pull',
+  burpee:'💥 Burpee Broad Jump',sandbag:'🎒 Sandbag Lunges',farmers:'🏋️ Farmers Carry',
+  wallball:'🏀 Wall Balls',strength:'💪 Fuerza',hyrox_sim:'🏆 Simulacro',
+  mobility:'🧘 Movilidad',mixed:'🔀 Mixto',pft:'🏆 PFT'
+};
+const ICONS = {run:'🏃',tempo:'⚡',intervals:'🔥',skierg:'❄️',row:'🚣',bike:'🚴',sled:'🛷',
+  burpee:'💥',sandbag:'🎒',farmers:'🏋️',wallball:'🏀',strength:'💪',hyrox_sim:'🏆',mobility:'🧘',mixed:'🔀',pft:'🏆'};
+const FEELINGS = {great:'😄 Muy bien',good:'🙂 Bien',ok:'😐 Regular',bad:'😓 Mal',terrible:'💀 Muy mal'};
+
+const STATIONS = [
+  {key:'skierg',   name:'SkiErg',          icon:'❄️',dist:'1000m',    ph:'2:30'},
+  {key:'sled_push',name:'Sled Push',        icon:'🛷',dist:'50m x8',   ph:'5:00'},
+  {key:'sled_pull',name:'Sled Pull',        icon:'⬆️',dist:'50m x8',   ph:'4:30'},
+  {key:'burpee',   name:'Burpee Broad Jump',icon:'💥',dist:'80 reps',  ph:'5:00'},
+  {key:'row',      name:'Rowing',           icon:'🚣',dist:'1000m',    ph:'3:20'},
+  {key:'farmers',  name:'Farmers Carry',    icon:'🏋️',dist:'200m',     ph:'2:00'},
+  {key:'sandbag',  name:'Sandbag Lunges',   icon:'🎒',dist:'100m',     ph:'5:00'},
+  {key:'wallball', name:'Wall Balls',       icon:'🏀',dist:'75-100r',  ph:'4:00'},
+];
+
+// ================================================================
+// STATE
+// ================================================================
+let USER = null;
+let WORKOUTS = [];
+let PROFILE = {};
+let PRS = {};
+let GOALS = {};
+let _pftN = 0;
+
+// ================================================================
+// AUTH
+// ================================================================
+let _authMode = 'login';
+
+function switchAuthTab(mode){
+  _authMode = mode;
+  document.querySelectorAll('.auth-tab').forEach((t,i)=>t.classList.toggle('active',['login','register'][i]===mode));
+  document.getElementById('auth-btn').textContent = mode==='login' ? 'Entrar' : 'Crear cuenta';
+  document.getElementById('auth-error').classList.add('hidden');
+  document.getElementById('auth-success').classList.add('hidden');
+}
+
+async function authAction(){
+  const email = document.getElementById('auth-email').value.trim();
+  const pass  = document.getElementById('auth-password').value;
+  const btn   = document.getElementById('auth-btn');
+  const errEl = document.getElementById('auth-error');
+  const sucEl = document.getElementById('auth-success');
+  errEl.classList.add('hidden'); sucEl.classList.add('hidden');
+  if(!email||!pass){ showAuthError('Completá email y contraseña.'); return; }
+  btn.disabled = true; btn.textContent = '...';
+  try {
+    if(_authMode === 'login'){
+      const {error} = await sb.auth.signInWithPassword({email,password:pass});
+      if(error) throw error;
+    } else {
+      const {error} = await sb.auth.signUp({email,password:pass});
+      if(error) throw error;
+      sucEl.textContent = '✅ Cuenta creada. Revisá tu email para confirmar y luego iniciá sesión.';
+      sucEl.classList.remove('hidden');
+      btn.disabled=false; btn.textContent='Crear cuenta'; return;
+    }
+  } catch(e){
+    showAuthError(e.message||'Error de autenticación.');
+    btn.disabled=false; btn.textContent=_authMode==='login'?'Entrar':'Crear cuenta';
+  }
+}
+
+function showAuthError(msg){
+  const el=document.getElementById('auth-error'); el.textContent=msg; el.classList.remove('hidden');
+}
+
+async function signOut(){
+  await sb.auth.signOut();
+  USER=null; WORKOUTS=[]; PROFILE={}; PRS={}; GOALS={};
+  document.getElementById('app-screen').style.display='none';
+  document.getElementById('auth-screen').style.display='flex';
+}
+
+// ================================================================
+// INIT — Auth state listener
+// ================================================================
+sb.auth.onAuthStateChange(async (event, session) => {
+  if(session?.user){
+    USER = session.user;
+    document.getElementById('auth-screen').style.display='none';
+    document.getElementById('loading-overlay').style.display='flex';
+    await loadAllData();
+    document.getElementById('loading-overlay').style.display='none';
+    document.getElementById('app-screen').style.display='block';
+    document.getElementById('sidebar-user').textContent = USER.email;
+    initLogDate();
+    renderCountdown();
+    renderDashboard();
+    renderStations();
+  } else {
+    document.getElementById('loading-overlay').style.display='none';
+    document.getElementById('auth-screen').style.display='flex';
+    document.getElementById('app-screen').style.display='none';
+  }
+});
+
+// ================================================================
+// DATA LOADING
+// ================================================================
+async function loadAllData(){
+  await Promise.all([loadWorkouts(), loadProfile(), loadStationRecords()]);
+}
+
+async function loadWorkouts(){
+  const {data, error} = await sb.from('workouts')
+    .select('*, workout_blocks(*)')
+    .eq('user_id', USER.id)
+    .order('workout_date', {ascending:false});
+  if(!error) WORKOUTS = (data||[]).map(w=>({
+    ...w,
+    date: w.workout_date,
+    duration: w.duration,
+    distance: w.distance_km,
+    blocks: (w.workout_blocks||[]).sort((a,b)=>a.position-b.position).map(b=>({
+      exercise: b.exercise, amount: b.amount, time: b.time_done, note: b.note
+    }))
+  }));
+}
+
+async function loadProfile(){
+  const {data} = await sb.from('profiles').select('*').eq('id',USER.id).single();
+  if(data) PROFILE = { name:data.name, age:data.age, weight:data.weight_kg, category:data.category, goalTime:data.goal_time, notes:data.notes };
+}
+
+async function loadStationRecords(){
+  const {data} = await sb.from('station_records').select('*').eq('user_id',USER.id);
+  PRS={}; GOALS={};
+  (data||[]).forEach(r=>{ if(r.pr_time) PRS[r.station_key]=r.pr_time; if(r.goal_time) GOALS[r.station_key]=r.goal_time; });
+}
+
+// ================================================================
+// COMPETITION & PHASE
+// ================================================================
+function daysToComp(){ const n=new Date();n.setHours(0,0,0,0);const c=new Date(COMP_DATE);c.setHours(0,0,0,0);return Math.max(0,Math.ceil((c-n)/86400000)); }
+function getPhase(d){
+  if(d>70)  return {name:'Base / Volumen',   color:'var(--blue)',   desc:'Base aeróbica y fuerza funcional'};
+  if(d>42)  return {name:'Específica',       color:'var(--purple)', desc:'Intensificar estaciones y tempo'};
+  if(d>21)  return {name:'Pico / Intensidad',color:'var(--accent)', desc:'Máxima intensidad y simulacros'};
+  if(d>7)   return {name:'Taper',            color:'var(--green)',  desc:'Reducir volumen, mantener intensidad'};
+  return          {name:'Race Week',         color:'var(--accent2)','desc':'Activaciones y preparación mental'};
+}
+function renderCountdown(){
+  const d=daysToComp(); const ph=getPhase(d);
+  const sc=document.getElementById('sidebar-countdown');
+  if(sc) sc.innerHTML=`<div class="days">${d}</div><div class="clbl">días para BsAs 🇦🇷</div>`;
+  const cb=document.getElementById('comp-bar');
+  if(cb) cb.innerHTML=`
+    <div class="cb-days">${d}</div>
+    <div class="cb-info">
+      <div class="cb-title">🏆 Hyrox Buenos Aires — 13 de junio 2025</div>
+      <div class="cb-sub">Cada sesión te acerca al resultado que querés.</div>
+      <div style="margin-top:5px"><span class="badge" style="background:rgba(0,0,0,.3);color:${ph.color};border:1px solid ${ph.color}50">${ph.name}</span> <span style="color:var(--muted);font-size:11px">${ph.desc}</span></div>
+    </div>
+    <div style="text-align:right">
+      <div style="font-size:11px;color:var(--muted)">Fase actual</div>
+      <div style="font-weight:800;font-size:15px;color:${ph.color}">${ph.name}</div>
+    </div>`;
+}
+
+// ================================================================
+// NAVIGATION
+// ================================================================
+function showPage(p){
+  document.querySelectorAll('[id^="page-"]').forEach(e=>e.classList.add('hidden'));
+  document.getElementById('page-'+p).classList.remove('hidden');
+  document.querySelectorAll('.nav-item').forEach(e=>e.classList.remove('active'));
+  ['dashboard','log','history','suggestions','stations','profile'].forEach((pg,i)=>{
+    if(pg===p) document.querySelectorAll('.nav-item')[i].classList.add('active');
+  });
+  if(p==='dashboard') renderDashboard();
+  if(p==='history')   renderHistory();
+  if(p==='stations')  renderStations();
+  if(p==='profile')   renderProfile();
+  if(p==='suggestions'){
+    const out=document.getElementById('suggestions-output');
+    document.getElementById('suggestions-empty').classList[out.innerHTML?'add':'remove']('hidden');
+  }
+  if(p==='log') setTimeout(initPftBlocks, 100);
+}
+
+// ================================================================
+// DATE HELPERS
+// ================================================================
+const parseDate = ds => ds ? new Date(ds+'T12:00:00') : null;
+const todayStr  = () => new Date().toISOString().split('T')[0];
+const fmtDate   = ds => { const d=parseDate(ds);return d?d.toLocaleDateString('es-AR',{day:'numeric',month:'short',year:'numeric'}):'' };
+
+// ================================================================
+// DASHBOARD
+// ================================================================
+function renderDashboard(){
+  renderCountdown();
+  const w = WORKOUTS;
+  document.getElementById('stat-total').textContent = w.length;
+
+  const now=new Date();now.setHours(0,0,0,0);
+  const dow=now.getDay();
+  const toMon=dow===0?-6:1-dow;
+  const wkStart=new Date(now);wkStart.setDate(now.getDate()+toMon);
+  const wkEnd=new Date(wkStart);wkEnd.setDate(wkStart.getDate()+6);wkEnd.setHours(23,59,59,999);
+
+  const thisWeek=w.filter(x=>{ const d=parseDate(x.date);return d&&d>=wkStart&&d<=wkEnd; });
+  document.getElementById('stat-week').textContent=thisWeek.length;
+  document.getElementById('stat-minutes').textContent=w.reduce((a,b)=>a+(b.duration||0),0);
+  const rpes=w.filter(x=>x.rpe);
+  document.getElementById('stat-rpe').textContent=rpes.length?(rpes.reduce((a,b)=>a+b.rpe,0)/rpes.length).toFixed(1):'—';
+
+  const dayNames=['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
+  document.getElementById('week-calendar').innerHTML=Array.from({length:7},(_,i)=>{
+    const d=new Date(wkStart);d.setDate(wkStart.getDate()+i);
+    const ds=d.toISOString().split('T')[0];
+    const has=thisWeek.some(x=>x.date===ds);
+    const tod=d.toDateString()===now.toDateString();
+    return `<div class="day-cell ${has?'has-workout':''}"><div class="dn">${dayNames[i]}</div><div class="dv" style="${tod?'color:var(--accent)':''}">${d.getDate()}</div>${has?'<div class="dd"></div>':'<div style="height:5px"></div>'}</div>`;
+  }).join('');
+
+  const types={};w.forEach(x=>{types[x.type]=(types[x.type]||0)+1;});
+  const bd=document.getElementById('type-breakdown');
+  if(!Object.keys(types).length){bd.innerHTML='<p style="color:var(--muted);font-size:13px">Sin datos aún.</p>';}
+  else{const mx=Math.max(...Object.values(types));bd.innerHTML=Object.entries(types).sort((a,b)=>b[1]-a[1]).map(([t,c])=>`<div style="margin-bottom:7px"><div style="display:flex;justify-content:space-between;margin-bottom:2px"><span style="font-size:12px">${TYPE_LABELS[t]||t}</span><span style="font-size:12px;color:var(--muted)">${c}</span></div><div class="prog-bar"><div class="prog-fill" style="width:${(c/mx)*100}%"></div></div></div>`).join('');}
+
+  const rec=document.getElementById('recent-workouts');
+  rec.innerHTML=w.length?w.slice(0,5).map(x=>wCard(x,true)).join(''):'<p style="color:var(--muted);font-size:13px">¡Cargá tu primera sesión!</p>';
+}
+
+function wCard(x, compact=false){
+  const rc=x.rpe<=4?'green':x.rpe<=7?'yellow':'red';
+  return `<div class="workout-item">
+    <div class="workout-icon">${ICONS[x.type]||'🎯'}</div>
+    <div class="workout-info">
+      <div class="workout-name">${TYPE_LABELS[x.type]||x.type}${x.type==='pft'?' <span class="badge badge-purple" style="font-size:10px;padding:2px 6px">PFT</span>':''}</div>
+      <div class="workout-meta">${fmtDate(x.date)} · ${x.duration}min${x.distance?' · '+x.distance+'km':''} · ${FEELINGS[x.feeling]||''}</div>
+      ${!compact&&x.notes?`<div style="font-size:12px;color:var(--muted);margin-top:3px">${x.notes.substring(0,120)}${x.notes.length>120?'...':''}</div>`:''}
+    </div>
+    <div class="workout-actions">
+      <span class="badge badge-${rc}">RPE ${x.rpe}</span>
+      <button class="btn btn-secondary btn-sm" onclick="viewWorkout('${x.id}')">Ver</button>
+    </div>
+  </div>`;
+}
+
+// ================================================================
+// LOG WORKOUT — STANDARD
+// ================================================================
+function initLogDate(){['w-date','pft-date'].forEach(id=>{const e=document.getElementById(id);if(e)e.value=todayStr();});}
+function switchLogTab(tab){
+  document.querySelectorAll('#log-tabs .tab').forEach((t,i)=>t.classList.toggle('active',i===(tab==='standard'?0:1)));
+  document.getElementById('form-standard').classList.toggle('hidden',tab!=='standard');
+  document.getElementById('form-pft').classList.toggle('hidden',tab!=='pft');
+}
+
+async function logWorkout(){
+  const type=document.getElementById('w-type').value;
+  const date=document.getElementById('w-date').value;
+  const dur=parseInt(document.getElementById('w-duration').value);
+  const dist=parseFloat(document.getElementById('w-distance').value)||null;
+  const rpe=parseInt(document.getElementById('w-rpe').value);
+  const notes=document.getElementById('w-notes').value.trim();
+  const feeling=document.getElementById('w-feeling').value;
+  if(!type){alert('Seleccioná el tipo.');return;}
+  if(!date){alert('Ingresá la fecha.');return;}
+  if(!dur||dur<1){alert('Ingresá la duración.');return;}
+
+  const btn=document.getElementById('log-btn');
+  btn.disabled=true;btn.textContent='Guardando...';
+  setEvalState('loading');
+
+  const d=daysToComp();const ph=getPhase(d);
+  const prompt=buildEvalPrompt({type,date,duration:dur,distance:dist,rpe,feeling,notes},d,ph);
+
+  let evalText='';
+  try { evalText=await callClaude(prompt); } catch(e){ evalText='Error al conectar con la IA.'; }
+
+  // Save to Supabase
+  showSaving(true);
+  try {
+    const {data,error}=await sb.from('workouts').insert({
+      user_id:USER.id, type, workout_date:date, duration:dur,
+      distance_km:dist, rpe, feeling, notes, evaluation:evalText
+    }).select().single();
+    if(error) throw error;
+    WORKOUTS.unshift({...data, date:data.workout_date, distance:data.distance_km, blocks:[]});
+    setEvalState('result',evalText);
+    resetStdForm();
+  } catch(e){ toast('❌ Error al guardar: '+e.message); setEvalState('result',evalText+'\n\n(Error al guardar en base de datos)'); }
+  showSaving(false);
+  btn.disabled=false;btn.textContent='⚡ Registrar y Evaluar con IA';
+}
+
+function buildEvalPrompt(w,d,ph){
+  return `Coach Hyrox élite. Evaluá esta sesión de atleta AVANZADO (2+ años, competencias, 6d/semana).
+
+COMPETENCIA: Buenos Aires 13/6/2025 — ${d} días | FASE: ${ph.name} — ${ph.desc}
+PRIORIDADES: SkiErg/Remo/Bike, Sled Push/Pull, Burpees/Wall Balls, Sandbag/Farmers
+${buildPRSummary()}
+
+SESIÓN:
+- Tipo: ${TYPE_LABELS[w.type]||w.type}
+- Fecha: ${fmtDate(w.date)} | Duración: ${w.duration}min${w.distance?' | Distancia: '+w.distance+'km':''}
+- RPE: ${w.rpe}/10 | Sensación: ${FEELINGS[w.feeling]}
+- Notas: ${w.notes||'Sin notas'}
+
+HISTORIAL (últimas 8 sesiones):
+${buildHistorySummary()||'Primera sesión.'}
+
+Evaluá:
+1. ✅ Lo que estuvo bien (técnico, nivel avanzado)
+2. 💡 Una mejora concreta orientada a la competencia
+3. 🗓️ Qué hacer mañana (fase ${ph.name}, ${d} días restantes)
+
+Directo, exigente, máx 180 palabras.`;
+}
+
+function setEvalState(s,txt=''){
+  document.getElementById('eval-placeholder').classList.add('hidden');
+  document.getElementById('eval-result').classList.add('hidden');
+  const ld=document.getElementById('eval-loading');ld.style.display='none';
+  if(s==='loading') ld.style.display='flex';
+  else if(s==='result'){document.getElementById('eval-result').classList.remove('hidden');document.getElementById('eval-text').textContent=txt;}
+}
+
+function resetStdForm(){
+  ['w-type','w-notes'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
+  ['w-duration','w-distance'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
+  document.getElementById('w-rpe').value=7;document.getElementById('rpe_val').textContent='7';
+  document.getElementById('w-feeling').value='good';initLogDate();
+}
+
+// ================================================================
+// LOG PFT
+// ================================================================
+function initPftBlocks(){const c=document.getElementById('pft-blocks');if(c&&c.children.length===0){addPftBlock();addPftBlock();addPftBlock();}}
+function addPftBlock(){
+  _pftN++;const id='pb'+_pftN;
+  const c=document.getElementById('pft-blocks');const d=document.createElement('div');
+  d.className='pft-block';d.id=id;
+  d.innerHTML=`<button class="rm" onclick="document.getElementById('${id}').remove()">✕</button>
+    <div class="pft-grid">
+      <div><label>Ejercicio</label><select class="pb-ex">
+        <option value="">—</option><option value="run">🏃 Carrera</option><option value="skierg">❄️ SkiErg</option>
+        <option value="row">🚣 Remo</option><option value="bike">🚴 Bike Erg</option>
+        <option value="sled_push">🛷 Sled Push</option><option value="sled_pull">⬆️ Sled Pull</option>
+        <option value="burpee">💥 Burpee Broad Jump</option><option value="sandbag">🎒 Sandbag</option>
+        <option value="farmers">🏋️ Farmers Carry</option><option value="wallball">🏀 Wall Balls</option>
+        <option value="strength">💪 Fuerza</option><option value="other">🔀 Otro</option>
+      </select></div>
+      <div><label>Dist/Reps</label><input type="text" class="pb-amt" placeholder="500m, 30r"/></div>
+      <div><label>Tiempo</label><input type="text" class="pb-time" placeholder="2:10"/></div>
+    </div>
+    <div style="margin-top:7px"><label>Nota</label><input type="text" class="pb-note" placeholder="Peso, sensación..."/></div>`;
+  c.appendChild(d);
+}
+
+async function logPFT(){
+  const date=document.getElementById('pft-date').value;
+  const dur=parseInt(document.getElementById('pft-duration').value);
+  const rpe=parseInt(document.getElementById('pft-rpe').value);
+  const notes=document.getElementById('pft-notes').value.trim();
+  const feeling=document.getElementById('pft-feeling').value;
+  if(!date){alert('Ingresá la fecha.');return;}
+  if(!dur||dur<1){alert('Ingresá la duración.');return;}
+
+  const blocks=[];
+  document.querySelectorAll('.pft-block').forEach(b=>{
+    const ex=b.querySelector('.pb-ex')?.value;const amt=b.querySelector('.pb-amt')?.value?.trim();
+    const time=b.querySelector('.pb-time')?.value?.trim();const note=b.querySelector('.pb-note')?.value?.trim();
+    if(ex&&amt) blocks.push({exercise:ex,amount:amt,time:time||'—',note:note||''});
+  });
+  if(!blocks.length){alert('Agregá al menos un bloque.');return;}
+
+  const btn=document.getElementById('pft-btn');btn.disabled=true;btn.textContent='Guardando...';
+  setEvalState('loading');
+
+  const d=daysToComp();const ph=getPhase(d);
+  const bd=blocks.map((b,i)=>`  ${i+1}. ${TYPE_LABELS[b.exercise]||b.exercise} — ${b.amount} — ⏱️${b.time}${b.note?' ('+b.note+')':''}`).join('\n');
+  const prompt=`Coach Hyrox élite. PFT de atleta AVANZADO.
+COMPETENCIA: Buenos Aires ${d} días | FASE: ${ph.name}
+${buildPRSummary()}
+SESIÓN PFT: ${fmtDate(date)} | ${dur}min | RPE: ${rpe}/10 | ${FEELINGS[feeling]}
+Bloques:\n${bd}
+Notas: ${notes||'—'}
+HISTORIAL: ${buildHistorySummary()||'Primera sesión.'}
+Analizá: 1.✅ Bloque más sólido 2.💡 Bloque a mejorar 3.📊 ¿Acorde a fase ${ph.name}? 4.🗓️ Siguiente sesión. Máx 220 palabras.`;
+
+  let evalText='';
+  try { evalText=await callClaude(prompt); } catch(e){ evalText='Error IA.'; }
+
+  showSaving(true);
+  try {
+    // Insert workout
+    const {data:wo,error:e1}=await sb.from('workouts').insert({
+      user_id:USER.id,type:'pft',workout_date:date,duration:dur,rpe,feeling,notes,evaluation:evalText
+    }).select().single();
+    if(e1) throw e1;
+
+    // Insert blocks
+    if(blocks.length){
+      const blockRows=blocks.map((b,i)=>({workout_id:wo.id,position:i+1,exercise:b.exercise,amount:b.amount,time_done:b.time,note:b.note}));
+      await sb.from('workout_blocks').insert(blockRows);
+    }
+
+    WORKOUTS.unshift({...wo, date:wo.workout_date, distance:wo.distance_km, blocks});
+    setEvalState('result',evalText);
+    document.getElementById('pft-blocks').innerHTML='';_pftN=0;
+    document.getElementById('pft-duration').value='';document.getElementById('pft-notes').value='';
+    initLogDate();initPftBlocks();
+  } catch(e){ toast('❌ Error al guardar: '+e.message); setEvalState('result',evalText); }
+  showSaving(false);btn.disabled=false;btn.textContent='⚡ Registrar PFT y Evaluar con IA';
+}
+
+// ================================================================
+// HISTORY
+// ================================================================
+function renderHistory(){
+  const f=document.getElementById('filter-type')?.value||'';
+  let ws=[...WORKOUTS];if(f) ws=ws.filter(x=>x.type===f);
+  document.getElementById('history-list').innerHTML=ws.length?ws.map(x=>wCard(x,false)).join(''):'<p style="color:var(--muted);font-size:13px">Sin resultados.</p>';
+}
+
+async function viewWorkout(id){
+  const w=WORKOUTS.find(x=>x.id===id);if(!w) return;
+  document.getElementById('modal-title').textContent=TYPE_LABELS[w.type]||w.type;
+  const blocksH=w.blocks?.length?`<div class="form-group"><label>Bloques PFT</label>${w.blocks.map((b,i)=>`<div style="background:var(--surface2);border-radius:7px;padding:9px 11px;margin-bottom:5px;font-size:13px"><strong>${i+1}. ${TYPE_LABELS[b.exercise]||b.exercise}</strong> — ${b.amount} — ⏱️${b.time}${b.note?' <span style="color:var(--muted)">· '+b.note+'</span>':''}</div>`).join('')}</div>`:'';
+  document.getElementById('modal-body').innerHTML=`
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:13px">
+      <div class="stat-card"><div class="lbl">Fecha</div><div style="font-weight:700">${fmtDate(w.date)}</div></div>
+      <div class="stat-card"><div class="lbl">Duración</div><div class="val">${w.duration}<span style="font-size:12px;color:var(--muted)">min</span></div></div>
+      <div class="stat-card"><div class="lbl">RPE</div><div class="val" style="color:${w.rpe>=8?'var(--accent2)':w.rpe>=5?'var(--accent)':'var(--green)'}">${w.rpe}/10</div></div>
+      <div class="stat-card"><div class="lbl">Sensación</div><div style="font-weight:700">${FEELINGS[w.feeling]||''}</div></div>
+    </div>
+    ${blocksH}
+    ${w.notes?`<div class="form-group"><label>Notas</label><div style="background:var(--surface2);border-radius:7px;padding:10px;font-size:13px;line-height:1.6">${w.notes}</div></div>`:''}
+    ${w.evaluation?`<div class="ai-box"><div class="ai-header"><span>🤖</span><span>Evaluación Coach IA</span></div><div class="ai-content">${w.evaluation}</div></div>`:''}
+    <div style="margin-top:13px;display:flex;gap:8px">
+      <button class="btn btn-danger btn-sm" onclick="deleteW('${w.id}')">🗑️ Eliminar</button>
+      <button class="btn btn-secondary btn-sm" onclick="closeModal()">Cerrar</button>
+    </div>`;
+  document.getElementById('detail-modal').classList.remove('hidden');
+}
+
+function closeModal(){document.getElementById('detail-modal').classList.add('hidden');}
+
+async function deleteW(id){
+  if(!confirm('¿Eliminar este entrenamiento?')) return;
+  showSaving(true);
+  await sb.from('workouts').delete().eq('id',id).eq('user_id',USER.id);
+  WORKOUTS=WORKOUTS.filter(x=>x.id!==id);
+  showSaving(false);closeModal();renderHistory();renderDashboard();
+}
+
+// ================================================================
+// SUGGESTIONS
+// ================================================================
+async function getSuggestions(){
+  setSugState('loading');
+  const d=daysToComp();const ph=getPhase(d);
+  const prompt=`Coach Hyrox élite. Plan semanal 6 días para atleta AVANZADO → Buenos Aires 13/6/2025.
+FALTAN: ${d} días | FASE: ${ph.name} — ${ph.desc}
+PRIORIDADES: SkiErg/Remo/Bike, Sled, Burpees/Wall Balls, Sandbag/Farmers
+${buildPRSummary()}
+HISTORIAL: ${buildHistorySummary()||'Sin historial.'}
+Periodización correcta, no 2 días intensos seguidos. Incluí carrera, estaciones, 1 PFT/mixto, 1 recovery activo.
+JSON sin markdown: {"plan":[{"day":"Lunes","name":"...","type":"...","duration":"...","description":"...","why":"...","intensity":"Alta|Media|Baja"}]}`;
+  try{const r=await callClaude(prompt);const p=JSON.parse(r.replace(/```json|```/g,'').trim());setSugState('done');renderSuggestions(p.plan||[]);}
+  catch(e){setSugState('error');}
+}
+
+async function getNextWorkout(){
+  setSugState('loading');
+  const d=daysToComp();const ph=getPhase(d);
+  const prompt=`Coach Hyrox. Próxima sesión para atleta avanzado. ${d} días para Buenos Aires. Fase: ${ph.name}. Historial: ${buildHistorySummary()||'Sin historial.'}
+JSON sin markdown: {"day":"Hoy","name":"...","type":"...","duration":"...","description":"...","why":"...","intensity":"Alta|Media|Baja"}`;
+  try{const r=await callClaude(prompt);const p=JSON.parse(r.replace(/```json|```/g,'').trim());setSugState('done');renderSuggestions([p]);}
+  catch(e){setSugState('error');}
+}
+
+async function getPhaseAdvice(){
+  setSugState('loading');
+  const d=daysToComp();const ph=getPhase(d);
+  const prompt=`Coach Hyrox. Consejo estratégico para atleta avanzado 6d/semana. Buenos Aires 13/6/2025 — ${d} días. Fase: ${ph.name}.
+Prioridades: SkiErg/Remo/Bike, Sled, Burpees/Wall Balls, Sandbag/Farmers.
+Historial: ${buildHistorySummary()||'Sin historial.'}
+1. Qué priorizar 2. Errores típicos de esta fase 3. Distribución 6 días 4. Indicadores de progreso.
+Máx 250 palabras. Sin JSON.`;
+  try{
+    const r=await callClaude(prompt);const d2=daysToComp();const ph2=getPhase(d2);setSugState('done');
+    document.getElementById('suggestions-output').innerHTML=`<div class="suggest-card"><div class="sh"><div class="st">📋 Estrategia — ${ph2.name}</div><span class="badge badge-yellow">${d2} días</span></div><div class="sb" style="white-space:pre-wrap">${r}</div></div>`;
+  }catch(e){setSugState('error');}
+}
+
+function setSugState(s){
+  document.getElementById('suggestions-empty').classList.add('hidden');
+  document.getElementById('suggestions-loading').classList.toggle('hidden',s!=='loading');
+  if(s==='error') document.getElementById('suggestions-output').innerHTML='<div class="ai-box"><div class="ai-content">Error. Intentá de nuevo.</div></div>';
+}
+
+function renderSuggestions(plan){
+  const ic={Alta:'var(--accent2)',Media:'var(--accent)',Baja:'var(--green)'};
+  document.getElementById('suggestions-output').innerHTML=plan.map(s=>`
+    <div class="suggest-card">
+      <div class="sh">
+        <div><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:2px">${s.day}</div><div class="st">${s.name}</div><div style="color:var(--muted);font-size:12px;margin-top:2px">⏱️ ${s.duration}</div></div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
+          <span class="badge badge-yellow">${s.type}</span>
+          ${s.intensity?`<span class="badge" style="background:rgba(0,0,0,.3);color:${ic[s.intensity]||'var(--muted)'};border:1px solid ${ic[s.intensity]||'var(--muted)'}40">${s.intensity}</span>`:''}
+        </div>
+      </div>
+      <div class="sb"><p style="margin-bottom:6px">${s.description}</p>
+        <div style="background:rgba(240,180,41,.07);border-left:3px solid var(--accent);padding:6px 11px;border-radius:0 6px 6px 0;font-size:12px"><strong style="color:var(--accent)">¿Por qué?</strong> ${s.why}</div>
+      </div>
+    </div>`).join('');
+}
+
+// ================================================================
+// STATIONS
+// ================================================================
+function renderStations(){
+  document.getElementById('stations-grid').innerHTML=STATIONS.map(s=>`
+    <div class="station-card" onclick="showStationDetail('${s.key}')">
+      <div style="font-size:24px;margin-bottom:4px">${s.icon}</div>
+      <div style="font-weight:700;font-size:12px">${s.name}</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:2px">${s.dist}</div>
+      ${PRS[s.key]?`<div style="margin-top:5px;font-size:13px;font-weight:800;color:var(--accent)">${PRS[s.key]}</div>`:'<div style="margin-top:5px;font-size:10px;color:var(--border)">Sin PR</div>'}
+      ${GOALS[s.key]?`<div style="font-size:10px;color:var(--green)">🎯${GOALS[s.key]}</div>`:''}
+    </div>`).join('');
+}
+
+async function showStationDetail(key){
+  const s=STATIONS.find(x=>x.key===key);if(!s) return;
+  const related=WORKOUTS.filter(w=>w.type===key||w.type==='hyrox_sim'||(w.blocks&&w.blocks.some(b=>b.exercise===key)));
+  document.getElementById('station-detail').innerHTML=`<div class="card">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:13px">
+      <div style="font-size:36px">${s.icon}</div>
+      <div><h3 style="font-size:17px;font-weight:800">${s.name}</h3><div style="color:var(--muted);font-size:13px">${s.dist}</div>
+        <div style="display:flex;gap:7px;margin-top:5px;flex-wrap:wrap">
+          ${PRS[s.key]?`<span class="badge badge-yellow">PR: ${PRS[s.key]}</span>`:''}
+          ${GOALS[s.key]?`<span class="badge badge-green">🎯 BsAs: ${GOALS[s.key]}</span>`:''}
+        </div>
+      </div>
+    </div>
+    <div class="card-title">Sesiones relacionadas (${related.length})</div>
+    ${related.slice(0,3).map(x=>wCard(x,true)).join('')||'<p style="color:var(--muted);font-size:13px;margin-bottom:10px">Sin sesiones aún.</p>'}
+    <button class="btn btn-primary btn-sm" style="margin-top:9px" onclick="stationTips('${key}')">🤖 Tips IA para ${s.name}</button>
+    <div id="sai-${key}" style="margin-top:9px"></div>
+  </div>`;
+}
+
+async function stationTips(key){
+  const s=STATIONS.find(x=>x.key===key);if(!s) return;
+  const el=document.getElementById('sai-'+key);
+  const d=daysToComp();const ph=getPhase(d);
+  el.innerHTML=`<div class="ai-thinking" style="padding:10px">Cargando <div class="dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div></div>`;
+  const prompt=`Coach Hyrox élite. 3 consejos de alto nivel para ${s.name} (${s.dist}) para atleta avanzado con ${d} días para Buenos Aires. Fase: ${ph.name}.
+${PRS[key]?'PR: '+PRS[key]:'Sin PR'}.${GOALS[key]?' Objetivo BsAs: '+GOALS[key]:''}
+Cubrí: técnica de competencia, estrategia de ritmo en carrera Hyrox, cómo entrenarla en esta fase. Máx 150 palabras.`;
+  try{const r=await callClaude(prompt);el.innerHTML=`<div class="ai-box"><div class="ai-header"><span>🤖</span><span>${s.icon} ${s.name}</span></div><div class="ai-content">${r}</div></div>`;}
+  catch(e){el.innerHTML='<p style="color:var(--muted);font-size:13px">Error.</p>';}
+}
+
+// ================================================================
+// PROFILE
+// ================================================================
+function renderProfile(){
+  if(PROFILE.name) document.getElementById('p-name').value=PROFILE.name||'';
+  if(PROFILE.age) document.getElementById('p-age').value=PROFILE.age||'';
+  if(PROFILE.weight) document.getElementById('p-weight').value=PROFILE.weight||'';
+  if(PROFILE.category) document.getElementById('p-category').value=PROFILE.category||'open_m';
+  if(PROFILE.goalTime) document.getElementById('p-goal-time').value=PROFILE.goalTime||'';
+  if(PROFILE.notes) document.getElementById('p-notes').value=PROFILE.notes||'';
+
+  document.getElementById('station-goals').innerHTML=STATIONS.map(s=>`
+    <div style="display:flex;align-items:center;gap:9px;margin-bottom:7px">
+      <span style="font-size:15px;width:22px">${s.icon}</span>
+      <span style="font-size:13px;flex:1;font-weight:600">${s.name}</span>
+      <input type="text" id="goal-${s.key}" value="${GOALS[s.key]||''}" placeholder="${s.ph}" style="width:82px;font-size:13px;padding:4px 8px"/>
+    </div>`).join('');
+
+  document.getElementById('pr-grid').innerHTML=STATIONS.map(s=>`
+    <div class="pr-card">
+      <div style="font-size:18px;margin-bottom:3px">${s.icon}</div>
+      <div style="font-weight:700;font-size:13px">${s.name}</div>
+      <div style="font-size:10px;color:var(--muted);margin-bottom:6px">${s.dist}</div>
+      <label>Tu PR</label>
+      <input type="text" id="pr-${s.key}" value="${PRS[s.key]||''}" placeholder="${s.ph}" style="font-size:15px;font-weight:800;text-align:center"/>
+      ${GOALS[s.key]?`<div style="font-size:10px;color:var(--green);margin-top:4px">🎯 Objetivo: ${GOALS[s.key]}</div>`:''}
+    </div>`).join('');
+}
+
+async function saveProfile(){
+  const btn=document.getElementById('save-profile-btn');btn.disabled=true;btn.textContent='Guardando...';
+  showSaving(true);
+  const newProfile={name:document.getElementById('p-name').value,age:parseInt(document.getElementById('p-age').value)||null,
+    weight:parseFloat(document.getElementById('p-weight').value)||null,category:document.getElementById('p-category').value,
+    goalTime:document.getElementById('p-goal-time').value,notes:document.getElementById('p-notes').value};
+
+  const goals={};
+  STATIONS.forEach(s=>{const v=document.getElementById('goal-'+s.key)?.value?.trim();if(v) goals[s.key]=v;});
+
+  try {
+    await sb.from('profiles').upsert({id:USER.id,name:newProfile.name,age:newProfile.age,weight_kg:newProfile.weight,
+      category:newProfile.category,goal_time:newProfile.goalTime,notes:newProfile.notes,updated_at:new Date().toISOString()});
+
+    for(const s of STATIONS){
+      const pr=PRS[s.key]||null;const g=goals[s.key]||null;
+      if(pr||g){
+        await sb.from('station_records').upsert({user_id:USER.id,station_key:s.key,pr_time:pr,goal_time:g,updated_at:new Date().toISOString()},{onConflict:'user_id,station_key'});
+      }
+    }
+    PROFILE=newProfile;GOALS=goals;toast('✅ Perfil guardado');renderStations();
+  } catch(e){toast('❌ Error: '+e.message);}
+  showSaving(false);btn.disabled=false;btn.textContent='💾 Guardar perfil';
+}
+
+async function savePRs(){
+  const btn=document.getElementById('save-prs-btn');btn.disabled=true;btn.textContent='Guardando...';
+  showSaving(true);
+  try {
+    for(const s of STATIONS){
+      const v=document.getElementById('pr-'+s.key)?.value?.trim();
+      if(v!==undefined){
+        PRS[s.key]=v||undefined;
+        await sb.from('station_records').upsert({user_id:USER.id,station_key:s.key,pr_time:v||null,goal_time:GOALS[s.key]||null,updated_at:new Date().toISOString()},{onConflict:'user_id,station_key'});
+      }
+    }
+    toast('✅ PRs guardados');renderStations();renderProfile();
+  } catch(e){toast('❌ Error: '+e.message);}
+  showSaving(false);btn.disabled=false;btn.textContent='💾 Guardar PRs';
+}
+
+// ================================================================
+// HELPERS
+// ================================================================
+async function callClaude(prompt){
+  const r=await fetch('https://api.anthropic.com/v1/messages',{
+    method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,messages:[{role:'user',content:prompt}]})
+  });
+  const d=await r.json();return d.content?.map(b=>b.text||'').join('')||'Sin respuesta.';
+}
+
+function buildHistorySummary(){
+  return WORKOUTS.slice(0,8).map(x=>{
+    const b=`${fmtDate(x.date)}: ${TYPE_LABELS[x.type]||x.type} (${x.duration}min, RPE ${x.rpe})`;
+    return x.type==='pft'&&x.blocks?.length?b+` [PFT: ${x.blocks.map(b=>b.exercise).join(', ')}]`:b;
+  }).join('\n');
+}
+
+function buildPRSummary(){
+  const prs=Object.entries(PRS);if(!prs.length&&!PROFILE.goalTime) return '';
+  let s='REGISTROS:\n';
+  prs.forEach(([k,v])=>{const st=STATIONS.find(x=>x.key===k);s+=`  PR ${st?.name||k}: ${v}${GOALS[k]?' → Objetivo BsAs: '+GOALS[k]:''}\n`;});
+  if(PROFILE.goalTime) s+=`  Tiempo objetivo total: ${PROFILE.goalTime}\n`;
+  return s;
+}
+
+function showSaving(show){document.getElementById('saving-indicator').classList.toggle('hidden',!show);}
+
+function toast(msg){
+  const t=document.createElement('div');t.textContent=msg;
+  t.style.cssText='position:fixed;bottom:22px;right:22px;background:var(--surface);border:1px solid var(--border);color:var(--text);padding:9px 18px;border-radius:8px;font-weight:700;font-size:13px;z-index:999;box-shadow:0 4px 20px rgba(0,0,0,.4)';
+  document.body.appendChild(t);setTimeout(()=>t.remove(),2800);
+}
+</script>
+</body>
+</html>
