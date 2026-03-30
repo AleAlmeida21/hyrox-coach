@@ -248,6 +248,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;heigh
   <div class="tabs" id="log-tabs">
     <div class="tab active" onclick="switchLogTab('standard')">Estándar</div>
     <div class="tab" onclick="switchLogTab('pft')">🏆 PFT (Hyrox Training)</div>
+    <div class="tab" onclick="switchLogTab('garmin')">⌚ Importar Garmin</div>
   </div>
   <div class="grid-2">
     <div>
@@ -317,7 +318,87 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;heigh
         </div>
         <button class="btn btn-primary" id="pft-btn" onclick="logPFT()" style="width:100%">⚡ Registrar PFT y Evaluar con IA</button>
       </div>
-    </div>
+
+      <!-- GARMIN IMPORT FORM -->
+      <div id="form-garmin" class="card hidden">
+        <div style="background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.25);border-radius:8px;padding:11px;margin-bottom:16px;font-size:13px;color:var(--muted)">
+          <strong style="color:var(--blue)">⌚ Importar desde Garmin Connect</strong><br/>
+          Exportá el archivo <strong>.GPX</strong> desde Garmin Connect y cargalo acá. Se extraen distancia, tiempo, FC y ritmo automáticamente.
+        </div>
+
+        <!-- Step 1: Upload -->
+        <div id="garmin-step1">
+          <div class="form-group">
+            <label>Archivo GPX de Garmin</label>
+            <div id="garmin-dropzone" onclick="document.getElementById('garmin-file').click()"
+              style="border:2px dashed var(--border);border-radius:10px;padding:30px;text-align:center;cursor:pointer;transition:border .2s;background:var(--surface2)">
+              <div style="font-size:36px;margin-bottom:8px">📂</div>
+              <div style="font-size:14px;font-weight:700;color:var(--text)">Hacé clic para seleccionar el archivo</div>
+              <div style="font-size:12px;color:var(--muted);margin-top:4px">Formato .GPX exportado desde Garmin Connect</div>
+            </div>
+            <input type="file" id="garmin-file" accept=".gpx" style="display:none" onchange="handleGarminFile(this)"/>
+          </div>
+          <div style="background:var(--surface2);border-radius:8px;padding:12px;font-size:12px;color:var(--muted);line-height:1.7">
+            <strong style="color:var(--text)">¿Cómo exportar de Garmin Connect?</strong><br/>
+            1. Abrí <a href="https://connect.garmin.com" target="_blank" style="color:var(--accent)">connect.garmin.com</a><br/>
+            2. Buscá la actividad que querés importar<br/>
+            3. Hacé clic en los <strong>tres puntos ···</strong> (esquina superior derecha)<br/>
+            4. Seleccioná <strong>"Exportar original"</strong> → descarga el .GPX<br/>
+            5. Subilo acá
+          </div>
+        </div>
+
+        <!-- Step 2: Preview & confirm -->
+        <div id="garmin-step2" class="hidden">
+          <div style="background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.3);border-radius:10px;padding:14px;margin-bottom:14px">
+            <div style="font-weight:700;font-size:14px;margin-bottom:10px">⌚ Datos extraídos del archivo</div>
+            <div class="grid-2" style="gap:9px;margin-bottom:10px">
+              <div class="stat-card"><div class="lbl">Tipo</div><div id="g-type-preview" style="font-weight:700;font-size:14px">—</div></div>
+              <div class="stat-card"><div class="lbl">Fecha</div><div id="g-date-preview" style="font-weight:700;font-size:14px">—</div></div>
+              <div class="stat-card"><div class="lbl">Duración</div><div id="g-duration-preview" style="font-weight:800;font-size:22px">—</div></div>
+              <div class="stat-card"><div class="lbl">Distancia</div><div id="g-distance-preview" style="font-weight:800;font-size:22px">—</div></div>
+            </div>
+            <div id="g-extra-preview" style="font-size:12px;color:var(--muted)"></div>
+          </div>
+
+          <div class="form-group">
+            <label>Ajustar tipo (si es incorrecto)</label>
+            <select id="g-type-select">
+              <option value="run">🏃 Carrera aeróbica</option>
+              <option value="tempo">⚡ Tempo Run</option>
+              <option value="intervals">🔥 Intervalos</option>
+              <option value="row">🚣 Remo</option>
+              <option value="skierg">❄️ SkiErg</option>
+              <option value="bike">🚴 Bike Erg</option>
+              <option value="strength">💪 Fuerza</option>
+              <option value="hyrox_sim">🏆 Simulacro Hyrox</option>
+              <option value="mobility">🧘 Movilidad</option>
+              <option value="mixed">🔀 Mixto</option>
+              <option value="pft">🏆 PFT</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>RPE — ¿Cómo fue el esfuerzo?</label>
+            <div class="slider-wrap"><input type="range" id="g-rpe" min="1" max="10" value="7" oninput="grpe_val.textContent=this.value"/><span class="slider-val" id="grpe_val">7</span></div>
+          </div>
+          <div class="form-group"><label>Sensación</label>
+            <select id="g-feeling">
+              <option value="great">😄 Muy bien</option><option value="good" selected>🙂 Bien</option>
+              <option value="ok">😐 Regular</option><option value="bad">😓 Mal</option><option value="terrible">💀 Muy mal</option>
+            </select>
+          </div>
+          <div class="form-group"><label>Notas adicionales</label>
+            <textarea id="g-notes" placeholder="El GPX ya tiene datos de FC, ritmo y distancia. Podés agregar notas de cómo te sentiste..."></textarea>
+          </div>
+
+          <div style="display:flex;gap:10px">
+            <button class="btn btn-secondary" onclick="resetGarminImport()" style="flex:1">← Otro archivo</button>
+            <button class="btn btn-primary" id="garmin-btn" onclick="logGarmin()" style="flex:2">⚡ Registrar y Evaluar con IA</button>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- end left col -->
     <div class="card">
       <div class="card-title">Evaluación del Coach IA</div>
       <div id="eval-placeholder" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:260px;color:var(--muted);text-align:center;gap:10px">
@@ -469,20 +550,32 @@ const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 // ================================================================
 // HYROX RACE CATALOG — Updated from official calendar
 // ================================================================
+// ================================================================
+// HYROX RACE CATALOG — Temporada 2025/2026
+// Solo carreras futuras o recientes. Fechas confirmadas del calendario oficial.
+// ================================================================
 const HYROX_RACES = [
-  // SUDAMÉRICA
-  {id:'buenosaires-26', city:'Buenos Aires',       country:'Argentina',    flag:'🇦🇷', date:'2026-06-13', venue:'La Rural',    region:'SAM'},
-  {id:'riodejaneiro-26', city:'Rio de Janeiro',       country:'Brasil',    flag:'🇧🇷', date:'2026-11-21', venue:'Centro de Eventos',    region:'SAM'},
-  // EUROPA
-  {id:'barcelona-26', city:'Barcelona',       country:'España',    flag:'🇪🇸', date:'2026-05-01', venue:'Fira de Barcelona',    region:'EUR'},
-  {id:'rotterdam-26', city:'Rotterdam',       country:'Holanda',   flag:'🇳🇱', date:'2026-04-15', venue:'Ahoy Rotterdam',       region:'EUR'},
-  {id:'warsaw-26',    city:'Varsovia',        country:'Polonia',   flag:'🇵🇱', date:'2026-04-16', venue:'PGE Narodowy',         region:'EUR'},
-  // NORTEAMÉRICA
-  {id:'las-vegas-26', city:'Las Vegas',       country:'EEUU',      flag:'🇺🇸', date:'2026-02-13', venue:'Mandalay Bay',         region:'NA'},
-  {id:'ny-26',        city:'Nueva York',      country:'EEUU',      flag:'🇺🇸', date:'2026-05-28', venue:'New York City',        region:'NA'},
-  // ASIA/OCEANÍA
-  {id:'sydney-26',    city:'Sydney',          country:'Australia', flag:'🇦🇺', date:'2026-03-07', venue:'ICC Sydney',           region:'APAC'},
-  {id:'brisbane-26',  city:'Brisbane',        country:'Australia', flag:'🇦🇺', date:'2026-04-09', venue:'Brisbane Convention',  region:'APAC'},
+  // ── SUDAMÉRICA ──
+  {id:'fortaleza-26', city:'Fortaleza',      country:'Brasil',    flag:'🇧🇷', date:'2026-02-28', venue:'Centro de Eventos do Ceará', region:'SAM'},
+  {id:'bsas-2026',    city:'Buenos Aires',   country:'Argentina', flag:'🇦🇷', date:'2026-06-13', venue:'Buenos Aires',               region:'SAM'},
+  {id:'rio-2026',     city:'Rio de Janeiro', country:'Brasil',    flag:'🇧🇷', date:'2026-11-21', venue:'Riocentro',                  region:'SAM'},
+
+  // ── EUROPA ──
+  {id:'manchester-26',city:'Manchester',     country:'UK',        flag:'🇬🇧', date:'2026-01-24', venue:'Manchester Central',         region:'EUR'},
+  {id:'amsterdam-26', city:'Amsterdam',      country:'Holanda',   flag:'🇳🇱', date:'2026-02-07', venue:'RAI Amsterdam',              region:'EUR'},
+  {id:'las-vegas-26', city:'Las Vegas',      country:'EEUU',      flag:'🇺🇸', date:'2026-02-14', venue:'Mandalay Bay',               region:'NA'},
+  {id:'munich-26',    city:'Múnich',         country:'Alemania',  flag:'🇩🇪', date:'2026-03-07', venue:'Olympiahalle',               region:'EUR'},
+  {id:'sydney-26',    city:'Sydney',         country:'Australia', flag:'🇦🇺', date:'2026-03-14', venue:'ICC Sydney',                 region:'APAC'},
+  {id:'warsaw-26',    city:'Varsovia',       country:'Polonia',   flag:'🇵🇱', date:'2026-03-28', venue:'PGE Narodowy',               region:'EUR'},
+  {id:'brisbane-26',  city:'Brisbane',       country:'Australia', flag:'🇦🇺', date:'2026-04-11', venue:'Brisbane Convention',        region:'APAC'},
+  {id:'rotterdam-26', city:'Rotterdam',      country:'Holanda',   flag:'🇳🇱', date:'2026-04-18', venue:'Ahoy Rotterdam',             region:'EUR'},
+  {id:'barcelona-26', city:'Barcelona',      country:'España',    flag:'🇪🇸', date:'2026-05-02', venue:'Fira de Barcelona',          region:'EUR'},
+  {id:'ny-26',        city:'Nueva York',     country:'EEUU',      flag:'🇺🇸', date:'2026-05-30', venue:'Javits Center',              region:'NA'},
+  {id:'chicago-26',   city:'Chicago',        country:'EEUU',      flag:'🇺🇸', date:'2026-06-06', venue:'McCormick Place',            region:'NA'},
+  {id:'paris-26',     city:'París',          country:'Francia',   flag:'🇫🇷', date:'2026-10-17', venue:'Porte de Versailles',        region:'EUR'},
+  {id:'madrid-26',    city:'Madrid',         country:'España',    flag:'🇪🇸', date:'2026-11-07', venue:'IFEMA Madrid',               region:'EUR'},
+  {id:'london-26',    city:'Londres',        country:'UK',        flag:'🇬🇧', date:'2026-11-14', venue:'ExCeL London',               region:'EUR'},
+  {id:'tokyo-26',     city:'Tokio',          country:'Japón',     flag:'🇯🇵', date:'2026-11-28', venue:'Tokyo Big Sight',            region:'APAC'},
 ];
 
 // Active competition (user-selected, falls back to next future SAM race)
@@ -617,9 +710,9 @@ sb.auth.onAuthStateChange(async (event, session) => {
     try { await loadAllData(); } catch(e) { console.error('loadAllData error:', e); }
     // Load races from localStorage (client-side, no DB needed)
     loadUserRaces();
-    // Seed Buenos Aires 2025 if user has no races yet
+    // Seed Buenos Aires 2026 if user has no races yet
     if(USER_RACES.length === 0){
-      addRace('bsas-2025');
+      addRace('bsas-2026');
     }
     document.getElementById('loading-overlay').style.display = 'none';
     document.getElementById('app-screen').style.display = 'block';
@@ -682,30 +775,47 @@ function daysToComp(){
   return race ? daysToDate(race.date) : 0;
 }
 function getPhase(d){
-  if(d>70)  return {name:'Base / Volumen',   color:'var(--blue)',   desc:'Base aeróbica y fuerza funcional'};
-  if(d>42)  return {name:'Específica',       color:'var(--purple)', desc:'Intensificar estaciones y tempo'};
-  if(d>21)  return {name:'Pico / Intensidad',color:'var(--accent)', desc:'Máxima intensidad y simulacros'};
-  if(d>7)   return {name:'Taper',            color:'var(--green)',  desc:'Reducir volumen, mantener intensidad'};
-  return          {name:'Race Week',         color:'var(--accent2)','desc':'Activaciones y preparación mental'};
+  if(d>180) return {name:'Temporada Base',    color:'var(--blue)',   desc:'Construir aeróbica, fuerza general y hábito'};
+  if(d>120) return {name:'Desarrollo',        color:'var(--blue)',   desc:'Incrementar volumen e introducir estaciones'};
+  if(d>70)  return {name:'Base / Volumen',    color:'var(--blue)',   desc:'Base aeróbica y fuerza funcional'};
+  if(d>42)  return {name:'Específica',        color:'var(--purple)', desc:'Intensificar estaciones y tempo'};
+  if(d>21)  return {name:'Pico / Intensidad', color:'var(--accent)', desc:'Máxima intensidad y simulacros'};
+  if(d>7)   return {name:'Taper',             color:'var(--green)',  desc:'Reducir volumen, mantener intensidad'};
+  return          {name:'Race Week',          color:'var(--accent2)','desc':'Activaciones y preparación mental'};
 }
 function renderCountdown(){
   const race = getNextRace();
   const d = race ? daysToDate(race.date) : 0;
   const ph = getPhase(d);
-  const raceName = race ? `${race.flag} ${race.city}, ${race.country}` : 'Sin carrera';
   const raceDate = race ? fmtDate(race.date) : '—';
 
   const sc=document.getElementById('sidebar-countdown');
-  if(sc) sc.innerHTML=`<div class="days">${d}</div><div class="clbl">días · ${race?.flag||'🏆'} ${race?.city||'—'}</div>`;
+  if(sc) sc.innerHTML=`<div class="days">${d}</div><div class="clbl">${race?.flag||'🏆'} ${race?.city||'—'}</div>`;
+
+  // Other upcoming races in agenda (for quick-switch pills)
+  const today = todayStr();
+  const otherRaces = USER_RACES
+    .filter(ur => ur.id !== race?.id && ur.date >= today)
+    .sort((a,b)=>a.date.localeCompare(b.date))
+    .slice(0,2);
+  const otherPills = otherRaces.map(ur=>{
+    const r2 = HYROX_RACES.find(r=>r.id===ur.id)||ur;
+    return `<span onclick="setActiveRace('${r2.id}')" style="cursor:pointer;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:3px 9px;font-size:11px;color:var(--muted);white-space:nowrap" title="Hacer principal">${r2.flag} ${r2.city} · ${daysToDate(r2.date)}d</span>`;
+  }).join('');
+
   const cb=document.getElementById('comp-bar');
   if(cb) cb.innerHTML=`
     <div class="cb-days">${d}</div>
     <div class="cb-info">
       <div class="cb-title">🏆 Hyrox ${race?.city||'—'} — ${raceDate}</div>
-      <div class="cb-sub">Cada sesión te acerca al resultado que querés. <a href="#" onclick="showPage('races');return false;" style="color:var(--accent);font-size:11px">Cambiar carrera →</a></div>
-      <div style="margin-top:5px"><span class="badge" style="background:rgba(0,0,0,.3);color:${ph.color};border:1px solid ${ph.color}50">${ph.name}</span> <span style="color:var(--muted);font-size:11px">${ph.desc}</span></div>
+      <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-top:4px">
+        <span style="color:var(--muted);font-size:11px">Principal ·</span>
+        ${otherPills}
+        <a href="#" onclick="showPage('races');return false;" style="color:var(--accent);font-size:11px">gestionar →</a>
+      </div>
+      <div style="margin-top:6px"><span class="badge" style="background:rgba(0,0,0,.3);color:${ph.color};border:1px solid ${ph.color}50">${ph.name}</span> <span style="color:var(--muted);font-size:11px">${ph.desc}</span></div>
     </div>
-    <div style="text-align:right">
+    <div style="text-align:right;flex-shrink:0">
       <div style="font-size:11px;color:var(--muted)">Fase actual</div>
       <div style="font-weight:800;font-size:15px;color:${ph.color}">${ph.name}</div>
     </div>`;
@@ -799,9 +909,10 @@ function wCard(x, compact=false){
 // ================================================================
 function initLogDate(){['w-date','pft-date'].forEach(id=>{const e=document.getElementById(id);if(e)e.value=todayStr();});}
 function switchLogTab(tab){
-  document.querySelectorAll('#log-tabs .tab').forEach((t,i)=>t.classList.toggle('active',i===(tab==='standard'?0:1)));
+  document.querySelectorAll('#log-tabs .tab').forEach((t,i)=>t.classList.toggle('active',['standard','pft','garmin'][i]===tab));
   document.getElementById('form-standard').classList.toggle('hidden',tab!=='standard');
   document.getElementById('form-pft').classList.toggle('hidden',tab!=='pft');
+  document.getElementById('form-garmin').classList.toggle('hidden',tab!=='garmin');
 }
 
 async function logWorkout(){
@@ -1170,10 +1281,15 @@ function renderMyRaces(){
 
 function renderRacesCatalog(){
   const today = todayStr();
-  let races = HYROX_RACES;
+  let races = [...HYROX_RACES].sort((a,b)=>a.date.localeCompare(b.date));
   if(_racesFilter !== 'all') races = races.filter(r=>r.region===_racesFilter);
 
-  document.getElementById('races-catalog').innerHTML = races.map(r => {
+  // Separate future and past
+  const future = races.filter(r=>r.date >= today);
+  const past    = races.filter(r=>r.date <  today);
+  const showPast = document.getElementById('toggle-past')?.checked;
+
+  const toHtml = r => {
     const days = daysToDate(r.date);
     const isPast = r.date < today;
     const isAdded = USER_RACES.some(ur=>ur.id===r.id);
@@ -1181,20 +1297,33 @@ function renderRacesCatalog(){
     return `<div class="race-card ${isActive?'is-active':''} ${isPast?'is-past':''}">
       <div class="race-flag">${r.flag}</div>
       <div class="race-info">
-        <div class="race-city">${r.city}, ${r.country} ${isActive?'<span class="badge badge-yellow" style="font-size:10px">Principal</span>':''}</div>
+        <div class="race-city">${r.city}, ${r.country}${isActive?' <span class="badge badge-yellow" style="font-size:10px">Principal</span>':''}</div>
         <div class="race-meta">${fmtDate(r.date)} · ${r.venue}</div>
       </div>
-      <div class="race-days" style="color:${isPast?'var(--muted)':days<30?'var(--accent2)':days<60?'var(--accent)':'var(--green)'}">
+      <div class="race-days" style="color:${isPast?'var(--muted)':days<60?'var(--accent2)':days<120?'var(--accent)':'var(--green)'}">
         ${isPast?'Pasada':days+'d'}
       </div>
       <div class="race-actions">
-        ${isAdded
+        ${isPast ? '' : isAdded
           ? `<span class="badge badge-green" style="font-size:11px">✓ Agendada</span>`
           : `<button class="btn btn-secondary btn-sm" onclick="addRace('${r.id}')">+ Agregar</button>`
         }
       </div>
     </div>`;
-  }).join('');
+  };
+
+  const pastSection = past.length ? `
+    <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border)">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;color:var(--muted);text-transform:none;letter-spacing:0;margin-bottom:${showPast?'10px':'0'}">
+        <input type="checkbox" id="toggle-past" ${showPast?'checked':''} onchange="renderRacesCatalog()" style="width:auto;padding:0;background:none;border:none"/> 
+        Mostrar carreras pasadas (${past.length})
+      </label>
+      ${showPast ? past.map(toHtml).join('') : ''}
+    </div>` : '';
+
+  document.getElementById('races-catalog').innerHTML =
+    (future.length ? future.map(toHtml).join('') : '<p style="color:var(--muted);font-size:13px">Sin carreras próximas en esta región.</p>')
+    + pastSection;
 }
 
 function filterRaces(region, btn){
@@ -1335,14 +1464,208 @@ async function savePRs(){
 }
 
 // ================================================================
+// GARMIN IMPORT
+// ================================================================
+let _garminData = null;
+
+async function handleGarminFile(input){
+  const file = input.files[0];
+  if(!file) return;
+
+  const dz = document.getElementById('garmin-dropzone');
+  dz.innerHTML = `<div style="font-size:28px;margin-bottom:6px">⏳</div><div style="font-size:13px;color:var(--muted)">Leyendo ${file.name}...</div>`;
+
+  const text = await file.text();
+
+  // Parse GPX client-side (no server needed for the parsing itself)
+  try {
+    const parsed = parseGPXClient(text);
+    _garminData = parsed;
+    showGarminPreview(parsed);
+  } catch(e) {
+    dz.innerHTML = `<div style="font-size:28px;margin-bottom:6px">❌</div><div style="font-size:13px;color:var(--accent2)">Error al leer el archivo. ¿Es un .GPX válido?</div>`;
+    console.error('GPX parse error:', e);
+  }
+}
+
+function parseGPXClient(xml){
+  const get = (tag, from=xml) => { const m=from.match(new RegExp(`<${tag}[^>]*>([\\s\\S]*?)<\\/${tag}>`)); return m?m[1].trim():null; };
+  const getAttr = (tag, attr) => { const m=xml.match(new RegExp(`<${tag}[^>]*${attr}="([^"]+)"`)); return m?m[1]:null; };
+
+  const name = get('name') || get('n') || 'Actividad Garmin';
+  const actType = (get('type')||'').toLowerCase();
+
+  // Date from first <time>
+  const timeMatch = xml.match(/<time>(.*?)<\/time>/);
+  let date = new Date().toISOString().split('T')[0];
+  if(timeMatch){ const d=new Date(timeMatch[1]); if(!isNaN(d)) date=d.toISOString().split('T')[0]; }
+
+  // Trackpoints
+  const trkpts = [...xml.matchAll(/<trkpt[^>]*lat="([^"]+)"[^>]*lon="([^"]+)"[^>]*>([\s\S]*?)<\/trkpt>/g)];
+
+  let dist=0, prevLat=null, prevLon=null, prevEle=null, elevGain=0;
+  let startTs=null, endTs=null;
+  let hrVals=[], cadVals=[];
+
+  for(const m of trkpts){
+    const lat=parseFloat(m[1]), lon=parseFloat(m[2]), inner=m[3];
+    const tsM=inner.match(/<time>(.*?)<\/time>/);
+    if(tsM){ const ts=new Date(tsM[1]).getTime(); if(!isNaN(ts)){ if(!startTs)startTs=ts; endTs=ts; } }
+    const eleM=inner.match(/<ele>([\d.]+)<\/ele>/);
+    if(eleM){ const ele=parseFloat(eleM[1]); if(prevEle!==null&&ele-prevEle>0) elevGain+=ele-prevEle; prevEle=ele; }
+    if(prevLat!==null) dist+=haversineClient(prevLat,prevLon,lat,lon);
+    prevLat=lat; prevLon=lon;
+    const hrM=inner.match(/<(?:ns3:|gpxtpx:)?hr>([\d]+)<\/(?:ns3:|gpxtpx:)?hr>/);
+    if(hrM) hrVals.push(parseInt(hrM[1]));
+    const cadM=inner.match(/<(?:ns3:|gpxtpx:)?cad>([\d]+)<\/(?:ns3:|gpxtpx:)?cad>/);
+    if(cadM) cadVals.push(parseInt(cadM[1])*2);
+  }
+
+  const durationMin = (startTs&&endTs) ? Math.round((endTs-startTs)/60000) : 0;
+  const distKm = Math.round(dist*100)/100;
+  const avgHr = hrVals.length ? Math.round(hrVals.reduce((a,b)=>a+b,0)/hrVals.length) : null;
+  const maxHr = hrVals.length ? Math.max(...hrVals) : null;
+  const avgCad = cadVals.length ? Math.round(cadVals.reduce((a,b)=>a+b,0)/cadVals.length) : null;
+
+  let pace=null;
+  if(distKm>0.1&&durationMin>0){
+    const p=durationMin/distKm; const pm=Math.floor(p); const ps=Math.round((p-pm)*60);
+    pace=`${pm}:${ps.toString().padStart(2,'0')} /km`;
+  }
+
+  const noteParts=[];
+  if(name&&name!=='Actividad Garmin') noteParts.push(`Actividad: ${name}`);
+  if(pace) noteParts.push(`Ritmo: ${pace}`);
+  if(Math.round(elevGain)>5) noteParts.push(`Desnivel: +${Math.round(elevGain)}m`);
+  if(avgHr) noteParts.push(`FC prom: ${avgHr} bpm`);
+  if(maxHr) noteParts.push(`FC máx: ${maxHr} bpm`);
+  if(avgCad) noteParts.push(`Cadencia: ${avgCad} ppm`);
+
+  return {
+    name, date,
+    type: mapGarminType(actType, name),
+    duration: durationMin,
+    distance_km: distKm,
+    elevation_gain: Math.round(elevGain),
+    avg_hr: avgHr, max_hr: maxHr, avg_cadence: avgCad,
+    pace,
+    notes: noteParts.join(' · ')
+  };
+}
+
+function haversineClient(lat1,lon1,lat2,lon2){
+  const R=6371, dLat=(lat2-lat1)*Math.PI/180, dLon=(lon2-lon1)*Math.PI/180;
+  const a=Math.sin(dLat/2)**2+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
+  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+
+function mapGarminType(t, name){
+  const n=(t+' '+name).toLowerCase();
+  if(n.includes('run')||n.includes('corre')||n.includes('jog')) return 'run';
+  if(n.includes('row')||n.includes('remo')) return 'row';
+  if(n.includes('ski')) return 'skierg';
+  if(n.includes('bike')||n.includes('cycl')) return 'bike';
+  if(n.includes('strength')||n.includes('weight')||n.includes('gym')) return 'strength';
+  if(n.includes('interval')) return 'intervals';
+  if(n.includes('tempo')) return 'tempo';
+  if(n.includes('hyrox')||n.includes('pft')) return 'pft';
+  return 'run'; // default for Garmin is usually running
+}
+
+function showGarminPreview(data){
+  document.getElementById('garmin-step1').classList.add('hidden');
+  document.getElementById('garmin-step2').classList.remove('hidden');
+  document.getElementById('g-type-preview').textContent = TYPE_LABELS[data.type]||data.type;
+  document.getElementById('g-date-preview').textContent = fmtDate(data.date);
+  document.getElementById('g-duration-preview').innerHTML = `${data.duration}<span style="font-size:12px;color:var(--muted)">min</span>`;
+  document.getElementById('g-distance-preview').innerHTML = data.distance_km>0 ? `${data.distance_km}<span style="font-size:12px;color:var(--muted)">km</span>` : '—';
+  document.getElementById('g-extra-preview').textContent = data.notes;
+  document.getElementById('g-type-select').value = data.type;
+  document.getElementById('g-notes').value = '';
+}
+
+function resetGarminImport(){
+  _garminData = null;
+  document.getElementById('garmin-step1').classList.remove('hidden');
+  document.getElementById('garmin-step2').classList.add('hidden');
+  document.getElementById('garmin-file').value='';
+  document.getElementById('garmin-dropzone').innerHTML=`<div style="font-size:36px;margin-bottom:8px">📂</div><div style="font-size:14px;font-weight:700;color:var(--text)">Hacé clic para seleccionar el archivo</div><div style="font-size:12px;color:var(--muted);margin-top:4px">Formato .GPX exportado desde Garmin Connect</div>`;
+}
+
+async function logGarmin(){
+  if(!_garminData) return;
+  const btn=document.getElementById('garmin-btn'); btn.disabled=true; btn.textContent='Guardando...';
+  setEvalState('loading');
+
+  const type = document.getElementById('g-type-select').value;
+  const rpe  = parseInt(document.getElementById('g-rpe').value);
+  const feeling = document.getElementById('g-feeling').value;
+  const extraNotes = document.getElementById('g-notes').value.trim();
+  const notes = [_garminData.notes, extraNotes].filter(Boolean).join('\n');
+  const d=daysToComp(); const ph=getPhase(d);
+  const race=getNextRace();
+  const raceLabel=race?`${race.city} (${fmtDate(race.date)})`:'próxima carrera';
+
+  const prompt=`Coach Hyrox élite. Evaluá esta sesión importada desde Garmin de un atleta AVANZADO.
+
+COMPETENCIA: ${raceLabel} — ${d} días | FASE: ${ph.name}
+${buildPRSummary()}
+
+DATOS DEL GARMIN:
+- Tipo: ${TYPE_LABELS[type]||type}
+- Fecha: ${fmtDate(_garminData.date)} | Duración: ${_garminData.duration}min
+- Distancia: ${_garminData.distance_km}km${_garminData.pace?' | Ritmo: '+_garminData.pace:''}
+${_garminData.avg_hr?`- FC promedio: ${_garminData.avg_hr} bpm | FC máxima: ${_garminData.max_hr||'—'} bpm`:''}
+${_garminData.avg_cadence?`- Cadencia: ${_garminData.avg_cadence} ppm`:''}
+${_garminData.elevation_gain>5?`- Desnivel positivo: ${_garminData.elevation_gain}m`:''}
+- RPE declarado: ${rpe}/10 | Sensación: ${FEELINGS[feeling]}
+- Notas: ${notes||'Sin notas'}
+
+HISTORIAL: ${buildHistorySummary()||'Primera sesión.'}
+
+Evaluá considerando los datos objetivos del GPS:
+1. ✅ Lo que estuvo bien (ritmo, FC, datos)
+2. 💡 Qué mejorar para la fase ${ph.name}
+3. 🗓️ Próxima sesión recomendada
+
+Máx 180 palabras.`;
+
+  let evalText='';
+  try { evalText=await callClaude(prompt); } catch(e){ evalText='Error al conectar con la IA. Verificá la configuración del servidor.'; }
+
+  showSaving(true);
+  try {
+    const {data:wo,error}=await sb.from('workouts').insert({
+      user_id:USER.id, type, workout_date:_garminData.date,
+      duration:_garminData.duration, distance_km:_garminData.distance_km,
+      rpe, feeling, notes, evaluation:evalText
+    }).select().single();
+    if(error) throw error;
+    WORKOUTS.unshift({...wo, date:wo.workout_date, distance:wo.distance_km, blocks:[]});
+    setEvalState('result', evalText);
+    resetGarminImport();
+  } catch(e){ toast('❌ Error al guardar: '+e.message); setEvalState('result', evalText); }
+  showSaving(false);
+  btn.disabled=false; btn.textContent='⚡ Registrar y Evaluar con IA';
+}
+
+// ================================================================
 // HELPERS
 // ================================================================
-async function callClaude(prompt){
-  const r=await fetch('https://api.anthropic.com/v1/messages',{
-    method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,messages:[{role:'user',content:prompt}]})
+async function callClaude(prompt, max_tokens=1000){
+  // Calls our Vercel serverless proxy (api/coach.js) which holds the API key securely.
+  // Direct calls to api.anthropic.com from the browser are blocked by CORS.
+  const r = await fetch('/api/coach', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ prompt, max_tokens })
   });
-  const d=await r.json();return d.content?.map(b=>b.text||'').join('')||'Sin respuesta.';
+  if (!r.ok) {
+    const err = await r.json().catch(()=>({}));
+    throw new Error(err.error || `HTTP ${r.status}`);
+  }
+  const d = await r.json();
+  return d.text || 'Sin respuesta.';
 }
 
 function buildHistorySummary(){
