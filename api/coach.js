@@ -1,19 +1,22 @@
 // api/coach.js — Vercel Serverless Function
 // Proxy seguro para llamadas a la API de Anthropic.
-// La API key vive como variable de entorno en Vercel, nunca llega al browser.
+// Usa module.exports (CommonJS) para máxima compatibilidad con Vercel.
 
-export default async function handler(req, res) {
-  // Solo POST
+module.exports = async function handler(req, res) {
+  // Handle CORS preflight
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  // CORS — permitir solo desde tu propio dominio
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-
-  const { prompt, max_tokens = 1000 } = req.body;
+  const { prompt, max_tokens = 1000 } = req.body || {};
 
   if (!prompt) {
     return res.status(400).json({ error: 'prompt requerido' });
@@ -21,7 +24,7 @@ export default async function handler(req, res) {
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
-    return res.status(500).json({ error: 'API key no configurada en Vercel' });
+    return res.status(500).json({ error: 'ANTHROPIC_API_KEY no configurada en Vercel Environment Variables' });
   }
 
   try {
@@ -40,9 +43,13 @@ export default async function handler(req, res) {
     });
 
     if (!response.ok) {
-      const err = await response.text();
-      console.error('Anthropic error:', err);
-      return res.status(response.status).json({ error: 'Error de API', detail: err });
+      const errText = await response.text();
+      console.error('Anthropic API error:', response.status, errText);
+      return res.status(response.status).json({ 
+        error: 'Error de Anthropic API', 
+        status: response.status,
+        detail: errText 
+      });
     }
 
     const data = await response.json();
@@ -50,7 +57,7 @@ export default async function handler(req, res) {
     return res.status(200).json({ text });
 
   } catch (error) {
-    console.error('Proxy error:', error);
-    return res.status(500).json({ error: 'Error interno', detail: error.message });
+    console.error('Proxy fetch error:', error);
+    return res.status(500).json({ error: 'Error interno del proxy', detail: error.message });
   }
-}
+};
