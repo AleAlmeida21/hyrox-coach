@@ -1,0 +1,8 @@
+{
+  "name": "hyrox-coach",
+  "version": "1.0.0",
+  "description": "Hyrox AI Coach",
+  "engines": {
+    "node": "18.x"
+  }
+}
